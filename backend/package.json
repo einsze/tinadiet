@@ -15,6 +15,7 @@
     "clean": "node -e \"import('node:fs').then(fs=>fs.rmSync('dist',{recursive:true,force:true}))\""
   },
   "dependencies": {
+    "@line/bot-sdk": "^9.6.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.1"
   },
