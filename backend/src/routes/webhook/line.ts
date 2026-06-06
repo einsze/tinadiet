@@ -6,6 +6,7 @@ import {
   type TextEventMessage,
 } from '@line/bot-sdk';
 import { lineClient, lineSignatureConfig } from '../../line/client.js';
+import { userRepository } from '../../repositories/users.js';
 
 const router = Router();
 
@@ -19,17 +20,28 @@ const handleEvent = async (event: WebhookEvent): Promise<void> => {
     return;
   }
 
-  const userText = event.message.text;
-  const replyToken = event.replyToken;
+  const lineUserId = event.source.userId;
+  if (!lineUserId) {
+    return;
+  }
+
+  const user = userRepository.upsertFromLine({ line_user_id: lineUserId });
+
+  console.log(
+    JSON.stringify({
+      level: 'info',
+      msg: 'webhook.message.text',
+      db_user_id: user.id,
+      line_user_id: lineUserId,
+      text_length: event.message.text.length,
+    })
+  );
+
+  const replyText = `User #${user.id}\nEcho: ${event.message.text}`;
 
   await lineClient.replyMessage({
-    replyToken,
-    messages: [
-      {
-        type: 'text',
-        text: `Echo: ${userText}`,
-      },
-    ],
+    replyToken: event.replyToken,
+    messages: [{ type: 'text', text: replyText }],
   });
 };
 

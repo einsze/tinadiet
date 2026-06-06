@@ -17,6 +17,8 @@ export const env = {
   LINE_CHANNEL_ID: requireEnv('LINE_CHANNEL_ID'),
   LINE_CHANNEL_SECRET: requireEnv('LINE_CHANNEL_SECRET'),
   LINE_CHANNEL_ACCESS_TOKEN: requireEnv('LINE_CHANNEL_ACCESS_TOKEN'),
+
+  DATABASE_URL: process.env.DATABASE_URL ?? 'file:./data/app.db',
 } as const;
 
 export type Env = typeof env;

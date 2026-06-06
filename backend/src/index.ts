@@ -1,7 +1,20 @@
 import 'dotenv/config';
 import express, { type Request, type Response } from 'express';
 import { env } from './config/env.js';
+import { runMigrations } from './db/migrate.js';
+import { dbFilePath } from './db/sqlite.js';
 import lineWebhookRouter from './routes/webhook/line.js';
+
+const migrationResult = runMigrations();
+console.log(
+  JSON.stringify({
+    level: 'info',
+    msg: 'db.ready',
+    file: dbFilePath,
+    migrations_applied: migrationResult.applied.length,
+    migrations_skipped: migrationResult.skipped.length,
+  })
+);
 
 const app = express();
 const STARTED_AT = new Date().toISOString();
