@@ -8,7 +8,7 @@
 |---|---|---|---|
 | local | feature branches | http://localhost:3000 | Solo-dev iteration |
 | preview | PRs | Railway-issued | Per-PR ephemeral env |
-| production | `main` | https://api.tinadiet.app | Live |
+| production | `main` | https://api.tinadiet.com | Live |
 
 ## Deploy flow
 

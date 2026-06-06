@@ -282,7 +282,7 @@ webhook.
 
 ### 7.1 Choose & buy
 
-- Project domain (chosen): **`tinadiet.app`**
+- Project domain (chosen): **`tinadiet.com`**
 - Registrar: Cloudflare Registrar (cheapest, no markup) recommended. Namecheap
   / GoDaddy also fine.
 - Cost: ~USD 12/year for `.app`.
@@ -354,30 +354,30 @@ DNS records (will be added after Step 9):
 ### 8.6 Point your custom domain at Railway
 
 1. Settings -> Networking -> "+ Custom Domain":
-   - `api.tinadiet.app`
+   - `api.tinadiet.com`
 2. Railway shows a CNAME target. In Cloudflare DNS, add:
    - `CNAME api -> <railway-target>` (Proxy: **DNS only / grey cloud**)
 3. Wait for Railway to verify (a few minutes) and issue an SSL cert.
-4. Repeat for `app.tinadiet.app` (this will serve the LIFF static bundle).
+4. Repeat for `app.tinadiet.com` (this will serve the LIFF static bundle).
    For this one you can keep proxy ON (orange cloud).
 
 ### 8.7 Save the URLs
 
-- Backend public URL: `https://api.tinadiet.app` -> set `APP_BASE_URL`.
+- Backend public URL: `https://api.tinadiet.com` -> set `APP_BASE_URL`.
 - LIFF page URL: `https://liff.line.me/<LIFF_ID>` -> set `PUBLIC_LIFF_URL`.
 
 ### 8.8 Update LINE webhook URL
 
 Go back to LINE Developers Console -> Messaging API channel -> Messaging API
 tab -> Webhook URL:
-- `https://api.tinadiet.app/webhook/line`
+- `https://api.tinadiet.com/webhook/line`
 - Click "Verify". If the backend service isn't deployed yet, this will fail -
   fine, return after Sprint 1's first deploy.
 
 ### 8.9 Update LIFF Endpoint URL
 
 LINE Developers Console -> Login channel -> LIFF tab -> Edit LIFF app:
-- Endpoint URL: `https://app.tinadiet.app/liff`
+- Endpoint URL: `https://app.tinadiet.com/liff`
 - Save.
 
 ---
@@ -410,8 +410,8 @@ https://uptimerobot.com - free tier, 50 monitors at 5-min interval.
 ### 10.2 Monitors
 
 Add two HTTP(S) monitors:
-- `https://api.tinadiet.app/healthz` -> expect 200 within 30s.
-- `https://app.tinadiet.app/liff` -> expect 200.
+- `https://api.tinadiet.com/healthz` -> expect 200 within 30s.
+- `https://app.tinadiet.com/liff` -> expect 200.
 
 Configure email + LINE Notify alert (set up via LINE Notify, separate token).
 
@@ -448,7 +448,7 @@ Developers -> API keys -> Reveal **Secret key** -> save as `STRIPE_SECRET_KEY`.
 ### 11.4 Webhook
 
 Developers -> Webhooks -> Add endpoint:
-- Endpoint URL: `https://api.tinadiet.app/webhook/stripe`
+- Endpoint URL: `https://api.tinadiet.com/webhook/stripe`
 - Events: `checkout.session.completed`,
   `customer.subscription.updated`, `customer.subscription.deleted`,
   `invoice.payment_failed`.
@@ -526,7 +526,7 @@ This is content/document work, not technical. Start drafting in Sprint 1.
 
 ### 14.2 Hosting
 
-Host as static pages under `app.tinadiet.app/privacy` and `/terms`.
+Host as static pages under `app.tinadiet.com/privacy` and `/terms`.
 URLs must be reachable BEFORE launch - LINE OA verification checks for them.
 
 ### 14.3 OpenAI DPA
@@ -560,7 +560,7 @@ Color palette (suggested - confirm with client):
 - [ ] All boxes in `00-setup-checklist.md` checked
 - [ ] Secrets stored in 1Password / Bitwarden vault, NOT in git
 - [ ] You can deploy a dummy backend to Railway and see it at
-      `https://api.tinadiet.app/healthz`
+      `https://api.tinadiet.com/healthz`
 - [ ] LINE webhook "Verify" succeeds
 - [ ] You can open the LIFF URL from your phone (even if it shows a blank
       page - this proves the routing chain works)

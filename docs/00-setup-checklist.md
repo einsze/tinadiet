@@ -17,7 +17,7 @@ Print or check off each item before Sprint 1 begins. Detailed steps are in
 - [ ] ~~Stripe account~~ **DEFERRED** - revisit when premium features ship
 - [ ] ~~LINE Pay merchant account~~ **DEFERRED** - submit first when payments are next
 - [ ] Cloudflare account (DNS + WAF, free tier OK)
-- [ ] Domain registered: **`tinadiet.app`**
+- [ ] Domain registered: **`tinadiet.com`**
 - [ ] Sentry account (free tier)
 - [ ] UptimeRobot account (free tier)
 
@@ -82,9 +82,9 @@ Print or check off each item before Sprint 1 begins. Detailed steps are in
 
 ## DNS
 
-- [ ] Domain `tinadiet.app` nameservers point to Cloudflare
-- [ ] CNAME record `api.tinadiet.app` -> Railway provided host (grey cloud / DNS only)
-- [ ] CNAME record `app.tinadiet.app` -> Railway provided host (orange cloud OK)
+- [ ] Domain `tinadiet.com` nameservers point to Cloudflare
+- [ ] CNAME record `api.tinadiet.com` -> Railway provided host (grey cloud / DNS only)
+- [ ] CNAME record `app.tinadiet.com` -> Railway provided host (orange cloud OK)
 - [ ] SSL: full (strict) once Railway cert issues
 - [ ] Cloudflare "Always Use HTTPS" enabled
 
