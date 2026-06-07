@@ -22,9 +22,10 @@ const isTextMessageEvent = (
 ): event is MessageEvent & { message: TextEventMessage } =>
   event.type === 'message' && event.message.type === 'text';
 
-const GREETING_RE = /^(hi|hello|halo|hey|yo|hai|ok|okay|thanks|thank you|ขอบคุณ|สวัสดี|ครับ|ค่ะ|haha|lol)$/i;
+const GREETING_RE =
+  /^(hi|hello|halo|hey|yo|hai|ok|okay|thanks|thank you|ขอบคุณ|สวัสดี|ครับ|ค่ะ|haha|lol|tina)(\s+tina)?$/i;
 const HINT_TEXT =
-  'Hi! Kirim apa yang Anda makan untuk dicatat otomatis.\nContoh: "ผัดกะเพราไก่ไข่ดาว" atau "1 plate of pad thai"';
+  'Hi! Saya Tina 🌱\nKirim apa yang Anda makan untuk dicatat otomatis.\nContoh: "ผัดกะเพราไก่ไข่ดาว" atau "1 plate of pad thai"';
 
 type IntentDecision = {
   kind: 'skip_command' | 'skip_greeting' | 'skip_empty' | 'attempt_parse';
