@@ -33,4 +33,30 @@ export const migrations: ReadonlyArray<Migration> = [
       CREATE INDEX idx_users_line ON users(line_user_id);
     `,
   },
+  {
+    name: '0002_food_logs',
+    sql: `
+      CREATE TABLE food_logs (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        logged_at       TEXT NOT NULL DEFAULT (datetime('now')),
+        date            TEXT NOT NULL,
+        meal_type       TEXT CHECK(meal_type IN ('breakfast','lunch','dinner','snack')),
+        food_name_th    TEXT,
+        food_name_en    TEXT,
+        quantity_text   TEXT,
+        kcal            REAL NOT NULL,
+        protein_g       REAL NOT NULL DEFAULT 0,
+        carbs_g         REAL NOT NULL DEFAULT 0,
+        fat_g           REAL NOT NULL DEFAULT 0,
+        source          TEXT NOT NULL CHECK(source IN ('manual','chat_regex','chat_ai','photo')),
+        raw_text        TEXT,
+        confidence      REAL,
+        created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX idx_food_logs_user_date ON food_logs(user_id, date);
+      CREATE INDEX idx_food_logs_logged_at ON food_logs(logged_at);
+    `,
+  },
 ];

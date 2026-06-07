@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { foodLogsApi } from '../api/foodLogs.js';
+import type { FoodLog, FoodLogTotals } from '../types/foodLog.js';
 import type { User } from '../types/user.js';
+import { KcalRing } from './KcalRing.js';
 
 const StatRow = ({
   label,
@@ -21,13 +24,89 @@ const StatRow = ({
   </div>
 );
 
+const MacroProgress = ({
+  label,
+  consumed,
+  goal,
+  tone,
+}: {
+  label: string;
+  consumed: number;
+  goal: number;
+  tone: 'protein' | 'carbs' | 'fat';
+}) => {
+  const ratio = goal > 0 ? Math.min(consumed / goal, 1) : 0;
+  const barClass =
+    tone === 'protein'
+      ? 'bg-rose-400'
+      : tone === 'carbs'
+        ? 'bg-amber-400'
+        : 'bg-sky-400';
+  return (
+    <div className="rounded-lg bg-slate-50 p-3">
+      <div className="flex items-baseline justify-between">
+        <div className="text-xs text-slate-500">{label}</div>
+        <div className="text-xs tabular-nums text-slate-700">
+          <span className="font-semibold">{consumed}</span>
+          <span className="text-slate-400"> / {goal} g</span>
+        </div>
+      </div>
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
+        <div
+          className={`h-full ${barClass}`}
+          style={{ width: `${ratio * 100}%`, transition: 'width 400ms ease-out' }}
+        />
+      </div>
+    </div>
+  );
+};
+
 type Props = {
   user: User;
   onEditProfile: () => void;
 };
 
+type LoadState =
+  | { kind: 'loading' }
+  | { kind: 'ready'; date: string; logs: FoodLog[]; totals: FoodLogTotals }
+  | { kind: 'error'; message: string };
+
 export const Dashboard = ({ user, onEditProfile }: Props) => {
-  const [showDebug] = useState(false);
+  const [state, setState] = useState<LoadState>({ kind: 'loading' });
+
+  const load = useCallback(async () => {
+    setState({ kind: 'loading' });
+    try {
+      const res = await foodLogsApi.listToday();
+      setState({
+        kind: 'ready',
+        date: res.date,
+        logs: res.logs,
+        totals: res.totals,
+      });
+    } catch (err) {
+      const message =
+        err !== null && typeof err === 'object' && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : String(err);
+      setState({ kind: 'error', message });
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const goal = user.daily_calorie_goal ?? 0;
+  const proteinGoal = user.daily_protein_g ?? 0;
+  const carbsGoal = user.daily_carbs_g ?? 0;
+  const fatGoal = user.daily_fat_g ?? 0;
+
+  const totals: FoodLogTotals =
+    state.kind === 'ready'
+      ? state.totals
+      : { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, count: 0 };
+
   return (
     <div className="space-y-4">
       <section className="rounded-xl bg-white p-6 shadow-sm">
@@ -43,48 +122,102 @@ export const Dashboard = ({ user, onEditProfile }: Props) => {
             Edit profile
           </button>
         </div>
-        <p className="mt-1 text-sm text-slate-500">Target harian Anda:</p>
+        <p className="mt-1 text-sm text-slate-500">
+          {state.kind === 'ready' ? `Today · ${state.date}` : 'Today'}
+        </p>
 
-        <div className="mt-4 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 p-5 text-white">
-          <div className="text-xs uppercase tracking-wide text-white/70">
-            Daily calorie goal
-          </div>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-4xl font-bold">{user.daily_calorie_goal}</span>
-            <span className="text-sm text-white/80">kcal</span>
-          </div>
+        <div className="mt-4 flex items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 p-6">
+          <KcalRing consumed={totals.kcal} goal={goal} />
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-lg bg-slate-50 p-3">
-            <div className="text-xs text-slate-500">Protein</div>
-            <div className="mt-0.5 text-base font-semibold text-slate-900">
-              {user.daily_protein_g}
-              <span className="ml-0.5 text-xs font-normal text-slate-500">g</span>
-            </div>
-          </div>
-          <div className="rounded-lg bg-slate-50 p-3">
-            <div className="text-xs text-slate-500">Carbs</div>
-            <div className="mt-0.5 text-base font-semibold text-slate-900">
-              {user.daily_carbs_g}
-              <span className="ml-0.5 text-xs font-normal text-slate-500">g</span>
-            </div>
-          </div>
-          <div className="rounded-lg bg-slate-50 p-3">
-            <div className="text-xs text-slate-500">Fat</div>
-            <div className="mt-0.5 text-base font-semibold text-slate-900">
-              {user.daily_fat_g}
-              <span className="ml-0.5 text-xs font-normal text-slate-500">g</span>
-            </div>
-          </div>
+        <div className="mt-4 space-y-2">
+          <MacroProgress
+            label="Protein"
+            consumed={totals.protein_g}
+            goal={proteinGoal}
+            tone="protein"
+          />
+          <MacroProgress
+            label="Carbs"
+            consumed={totals.carbs_g}
+            goal={carbsGoal}
+            tone="carbs"
+          />
+          <MacroProgress
+            label="Fat"
+            consumed={totals.fat_g}
+            goal={fatGoal}
+            tone="fat"
+          />
         </div>
+      </section>
+
+      <section className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-slate-900">Today&apos;s logs</h3>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="text-xs font-medium text-brand-700 hover:underline"
+          >
+            Refresh
+          </button>
+        </div>
+
+        {state.kind === 'loading' ? (
+          <p className="mt-3 text-sm text-slate-500">Loading…</p>
+        ) : null}
+
+        {state.kind === 'error' ? (
+          <p className="mt-3 text-sm text-rose-700">Error: {state.message}</p>
+        ) : null}
+
+        {state.kind === 'ready' && state.logs.length === 0 ? (
+          <div className="mt-3 rounded-lg border border-dashed border-slate-200 px-4 py-6 text-center">
+            <p className="text-sm text-slate-500">
+              Belum ada log hari ini.
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Kirim makanan yang Anda makan ke chat TinaDiet untuk log otomatis.
+              <br />
+              <span className="text-slate-300">(Coming in next milestone)</span>
+            </p>
+          </div>
+        ) : null}
+
+        {state.kind === 'ready' && state.logs.length > 0 ? (
+          <ul className="mt-3 divide-y divide-slate-100">
+            {state.logs.map((log) => (
+              <li key={log.id} className="flex items-start justify-between py-3">
+                <div>
+                  <div className="text-sm font-medium text-slate-900">
+                    {log.food_name_th ?? log.food_name_en ?? log.raw_text ?? 'Food'}
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {log.quantity_text !== null ? `${log.quantity_text} · ` : ''}
+                    {log.meal_type ?? log.source}
+                  </div>
+                </div>
+                <div className="text-right text-sm">
+                  <div className="font-semibold text-slate-900">
+                    {Math.round(log.kcal)}
+                    <span className="ml-0.5 text-xs font-normal text-slate-500">kcal</span>
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {Math.round(log.protein_g)}p · {Math.round(log.carbs_g)}c ·{' '}
+                    {Math.round(log.fat_g)}f
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </section>
 
       <section className="rounded-xl bg-white p-6 shadow-sm">
         <h3 className="text-sm font-semibold text-slate-900">Your profile</h3>
         <dl className="mt-2 divide-y divide-slate-100">
           <StatRow label="Gender" value={user.gender ?? '—'} />
-          <StatRow label="Date of birth" value={user.date_of_birth ?? '—'} />
           <StatRow label="Height" value={user.height_cm ?? '—'} unit="cm" />
           <StatRow
             label="Current weight"
@@ -102,21 +235,6 @@ export const Dashboard = ({ user, onEditProfile }: Props) => {
           <StatRow label="TDEE" value={user.tdee_kcal ?? '—'} unit="kcal" />
         </dl>
       </section>
-
-      <section className="rounded-xl bg-brand-500/5 border border-brand-500/10 p-6">
-        <h3 className="font-semibold text-brand-900">What&apos;s next</h3>
-        <ul className="mt-2 space-y-1 text-sm text-slate-600">
-          <li>• Food logging (text + photo)</li>
-          <li>• Daily kcal ring + remaining quota</li>
-          <li>• AI coach chat</li>
-        </ul>
-      </section>
-
-      {showDebug ? (
-        <pre className="rounded-lg bg-slate-900 p-3 text-xs text-slate-200">
-          {JSON.stringify(user, null, 2)}
-        </pre>
-      ) : null}
     </div>
   );
 };
