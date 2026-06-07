@@ -13,7 +13,7 @@ import {
   FoodParserError,
 } from '../../services/food_parser.js';
 import { todayInTimezone } from '../../domain/date.js';
-import type { User } from '../../domain/types.js';
+import type { FoodLog, FoodLogTotals, User } from '../../domain/types.js';
 
 const router = Router();
 
@@ -25,19 +25,62 @@ const isTextMessageEvent = (
 const GREETING_RE =
   /^(hi|hello|halo|hey|yo|hai|ok|okay|thanks|thank you|ขอบคุณ|สวัสดี|ครับ|ค่ะ|haha|lol|tina)(\s+tina)?$/i;
 const HINT_TEXT =
-  'สวัสดีค่ะ ฉัน Tina 🌱\nบอกฉันได้เลยว่าวันนี้ทานอะไร ฉันจะคำนวณแคลให้\nตัวอย่าง: "ผัดกะเพราไก่ไข่ดาว" หรือ "1 plate of pad thai"';
+  'สวัสดีค่ะ ฉัน Tina 🌱\nบอกฉันได้เลยว่าวันนี้ทานอะไร ฉันจะคำนวณแคลให้\nตัวอย่าง: "ผัดกะเพราไก่ไข่ดาว" หรือ "1 plate of pad thai"\n\nพิมพ์ "วันนี้" เพื่อดูบันทึกของวันนี้';
+
+const isShowLogsRequest = (text: string): boolean => {
+  const t = text.trim().toLowerCase();
+  return (
+    /^\/?logs?$/i.test(t) ||
+    /^\/?today$/i.test(t) ||
+    /^summary$/i.test(t) ||
+    /^list$/i.test(t) ||
+    /^what (did|have) i (eat|eaten|ate)/i.test(t) ||
+    /^show (logs?|today|me)/i.test(t) ||
+    /^วันนี้/.test(t) ||
+    /^สรุป/.test(t) ||
+    /^รายการ/.test(t) ||
+    /^กินอะไร/.test(t)
+  );
+};
 
 type IntentDecision = {
-  kind: 'skip_command' | 'skip_greeting' | 'skip_empty' | 'attempt_parse';
+  kind:
+    | 'skip_command'
+    | 'skip_greeting'
+    | 'skip_empty'
+    | 'show_logs'
+    | 'attempt_parse';
 };
 
 const classifyIntent = (text: string): IntentDecision => {
   const trimmed = text.trim();
   if (trimmed.length === 0) return { kind: 'skip_empty' };
+  if (isShowLogsRequest(trimmed)) return { kind: 'show_logs' };
   if (trimmed.startsWith('/')) return { kind: 'skip_command' };
   if (trimmed.length < 3) return { kind: 'skip_greeting' };
   if (GREETING_RE.test(trimmed)) return { kind: 'skip_greeting' };
   return { kind: 'attempt_parse' };
+};
+
+const formatLogsList = (
+  user: User,
+  logs: FoodLog[],
+  totals: FoodLogTotals
+): string => {
+  if (logs.length === 0) {
+    return 'ยังไม่มีบันทึกอาหารวันนี้ค่ะ 🍽️\nลองพิมพ์ชื่ออาหารที่ทาน Tina จะคำนวณให้';
+  }
+  const lines = logs.map((log, i) => {
+    const name =
+      log.food_name_th ?? log.food_name_en ?? log.raw_text ?? 'อาหาร';
+    return `${i + 1}. ${name} · ${Math.round(log.kcal)} kcal · ${Math.round(log.protein_g)}p/${Math.round(log.carbs_g)}c/${Math.round(log.fat_g)}f`;
+  });
+  const goal = user.daily_calorie_goal;
+  const summary =
+    goal !== null
+      ? `\n\nรวม: ${totals.kcal} / ${goal} kcal\nเหลือ: ${Math.max(goal - totals.kcal, 0)} kcal`
+      : `\n\nรวม: ${totals.kcal} kcal (${totals.count} รายการ)`;
+  return `📋 วันนี้\n${lines.join('\n')}${summary}`;
 };
 
 const formatConfirmation = (
@@ -84,6 +127,25 @@ const handleEvent = async (event: WebhookEvent): Promise<void> => {
   );
 
   const intent = classifyIntent(text);
+  if (intent.kind === 'show_logs') {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.intent.show_logs',
+        db_user_id: user.id,
+      })
+    );
+    const date = todayInTimezone(user.timezone);
+    const logs = foodLogsRepository.listByUserAndDate(user.id, date);
+    const totals = foodLogsRepository.totalsByUserAndDate(user.id, date);
+    const replyText = formatLogsList(user, logs, totals);
+    await lineClient.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{ type: 'text', text: replyText }],
+    });
+    return;
+  }
+
   if (intent.kind !== 'attempt_parse') {
     console.log(
       JSON.stringify({
