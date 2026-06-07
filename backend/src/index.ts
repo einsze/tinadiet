@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express, { type Request, type Response } from 'express';
+import cors from 'cors';
 import { env } from './config/env.js';
 import { runMigrations } from './db/migrate.js';
 import { dbFilePath } from './db/sqlite.js';
@@ -24,6 +25,33 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
 app.use('/webhook', lineWebhookRouter);
+
+const allowedOriginPatterns: Array<string | RegExp> = [
+  'https://app.tinadiet.com',
+  'https://liff.line.me',
+  'http://localhost:5173',
+  /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/,
+];
+
+app.use(
+  '/api/v1',
+  cors({
+    origin: (origin, callback) => {
+      if (origin === undefined) {
+        callback(null, true);
+        return;
+      }
+      const allowed = allowedOriginPatterns.some((p) =>
+        typeof p === 'string' ? p === origin : p.test(origin)
+      );
+      callback(null, allowed);
+    },
+    credentials: false,
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 600,
+  })
+);
 
 app.use(express.json({ limit: '256kb' }));
 
