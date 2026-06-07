@@ -83,28 +83,40 @@ const formatLogsList = (
   return `📋 วันนี้\n${lines.join('\n')}${summary}`;
 };
 
-const formatConfirmation = (
-  user: User,
-  foodNameTh: string | null,
-  foodNameEn: string | null,
-  kcal: number,
-  proteinG: number,
-  carbsG: number,
-  fatG: number
-): string => {
+type SavedItem = {
+  food_name_th: string | null;
+  food_name_en: string | null;
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+};
+
+const formatTodayLine = (user: User): string => {
   const today = todayInTimezone(user.timezone);
   const totals = foodLogsRepository.totalsByUserAndDate(user.id, today);
-  const nameLine =
-    foodNameTh && foodNameEn
-      ? `${foodNameTh} (${foodNameEn})`
-      : (foodNameTh ?? foodNameEn ?? 'Food');
-  const macros = `${Math.round(kcal)} kcal · ${Math.round(proteinG)}p · ${Math.round(carbsG)}c · ${Math.round(fatG)}f`;
   const goal = user.daily_calorie_goal;
-  const progress =
-    goal !== null
-      ? `\nToday: ${totals.kcal} / ${goal} kcal`
-      : `\nToday: ${totals.kcal} kcal logged`;
-  return `✅ ${nameLine}\n${macros}${progress}`;
+  return goal !== null
+    ? `Today: ${totals.kcal} / ${goal} kcal`
+    : `Today: ${totals.kcal} kcal logged`;
+};
+
+const formatSingleConfirmation = (user: User, item: SavedItem): string => {
+  const nameLine =
+    item.food_name_th && item.food_name_en
+      ? `${item.food_name_th} (${item.food_name_en})`
+      : (item.food_name_th ?? item.food_name_en ?? 'อาหาร');
+  const macros = `${Math.round(item.kcal)} kcal · ${Math.round(item.protein_g)}p · ${Math.round(item.carbs_g)}c · ${Math.round(item.fat_g)}f`;
+  return `✅ ${nameLine}\n${macros}\n${formatTodayLine(user)}`;
+};
+
+const formatMultiConfirmation = (user: User, items: SavedItem[]): string => {
+  const lines = items.map((item, i) => {
+    const name = item.food_name_th ?? item.food_name_en ?? 'อาหาร';
+    return `${i + 1}. ${name} · ${Math.round(item.kcal)} kcal`;
+  });
+  const sessionKcal = items.reduce((sum, item) => sum + item.kcal, 0);
+  return `✅ บันทึก ${items.length} รายการ\n${lines.join('\n')}\nรวมครั้งนี้: ${Math.round(sessionKcal)} kcal\n${formatTodayLine(user)}`;
 };
 
 const handleEvent = async (event: WebhookEvent): Promise<void> => {
@@ -174,16 +186,15 @@ const handleEvent = async (event: WebhookEvent): Promise<void> => {
         output_tokens: usage.output_tokens,
         latency_ms: usage.latency_ms,
         is_food: result.is_food,
-        confidence: result.confidence,
+        needs_clarification: result.needs_clarification,
+        item_count: result.items.length,
       })
     );
 
     if (!result.is_food) {
       const reason = result.reason ?? '';
       const replyText =
-        reason.length > 0
-          ? `${reason}\n\n${HINT_TEXT}`
-          : HINT_TEXT;
+        reason.length > 0 ? `${reason}\n\n${HINT_TEXT}` : HINT_TEXT;
       await lineClient.replyMessage({
         replyToken: event.replyToken,
         messages: [{ type: 'text', text: replyText }],
@@ -191,41 +202,64 @@ const handleEvent = async (event: WebhookEvent): Promise<void> => {
       return;
     }
 
-    const log = foodLogsRepository.create({
-      user_id: user.id,
-      user_timezone: user.timezone,
-      meal_type: result.meal_type,
-      food_name_th: result.food_name_th,
-      food_name_en: result.food_name_en,
-      quantity_text: result.quantity_text,
-      kcal: result.kcal,
-      protein_g: result.protein_g,
-      carbs_g: result.carbs_g,
-      fat_g: result.fat_g,
-      source: 'chat_ai',
-      raw_text: text,
-      confidence: result.confidence,
+    if (result.needs_clarification) {
+      const question =
+        result.clarification_question ??
+        'บอกชื่ออาหารที่ทานให้ละเอียดขึ้นได้ไหมคะ?';
+      await lineClient.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{ type: 'text', text: question }],
+      });
+      return;
+    }
+
+    if (result.items.length === 0) {
+      await lineClient.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{ type: 'text', text: HINT_TEXT }],
+      });
+      return;
+    }
+
+    const savedItems: SavedItem[] = result.items.map((item) => {
+      const log = foodLogsRepository.create({
+        user_id: user.id,
+        user_timezone: user.timezone,
+        meal_type: item.meal_type,
+        food_name_th: item.food_name_th,
+        food_name_en: item.food_name_en,
+        quantity_text: item.quantity_text,
+        kcal: item.kcal,
+        protein_g: item.protein_g,
+        carbs_g: item.carbs_g,
+        fat_g: item.fat_g,
+        source: 'chat_ai',
+        raw_text: text,
+        confidence: item.confidence,
+      });
+      console.log(
+        JSON.stringify({
+          level: 'info',
+          msg: 'webhook.food_log.created',
+          db_user_id: user.id,
+          log_id: log.id,
+          kcal: log.kcal,
+        })
+      );
+      return {
+        food_name_th: log.food_name_th,
+        food_name_en: log.food_name_en,
+        kcal: log.kcal,
+        protein_g: log.protein_g,
+        carbs_g: log.carbs_g,
+        fat_g: log.fat_g,
+      };
     });
 
-    console.log(
-      JSON.stringify({
-        level: 'info',
-        msg: 'webhook.food_log.created',
-        db_user_id: user.id,
-        log_id: log.id,
-        kcal: log.kcal,
-      })
-    );
-
-    const replyText = formatConfirmation(
-      user,
-      result.food_name_th,
-      result.food_name_en,
-      result.kcal,
-      result.protein_g,
-      result.carbs_g,
-      result.fat_g
-    );
+    const replyText =
+      savedItems.length === 1
+        ? formatSingleConfirmation(user, savedItems[0]!)
+        : formatMultiConfirmation(user, savedItems);
 
     await lineClient.replyMessage({
       replyToken: event.replyToken,

@@ -2,8 +2,7 @@ import { env } from '../config/env.js';
 import { openai } from './openai.js';
 import type { MealType } from '../domain/types.js';
 
-export type FoodParserResult = {
-  is_food: boolean;
+export type FoodParserItem = {
   food_name_th: string | null;
   food_name_en: string | null;
   quantity_text: string | null;
@@ -13,7 +12,14 @@ export type FoodParserResult = {
   carbs_g: number;
   fat_g: number;
   confidence: number;
+};
+
+export type FoodParserResult = {
+  is_food: boolean;
+  needs_clarification: boolean;
+  clarification_question: string | null;
   reason: string | null;
+  items: FoodParserItem[];
 };
 
 export type FoodParserUsage = {
@@ -30,24 +36,75 @@ export type FoodParserResponse = {
 
 const SYSTEM_PROMPT = `You are Tina, a friendly Thai nutrition coach.
 
-Your task: parse a single chat message and decide if it describes a food the user just ate. If yes, estimate Thai-portion nutrition values; if no, reply with is_food=false and a short reason.
+Your job: parse a single chat message that may describe what the user just ate.
+
+Output one of three states (mutually exclusive):
+
+A) NOT food (greeting, command, complaint, random text):
+   is_food=false, needs_clarification=false, items=[],
+   reason=short Thai sentence (e.g. "นั่นไม่ใช่อาหารนะ", "บอกชื่ออาหารที่ทานหน่อย").
+
+B) Food but TOO VAGUE to estimate (e.g. "ข้าว", "rice", "soup", "noodles",
+   "ขนม", "lunch", "อาหารเย็น", "ate a lot"):
+   is_food=true, needs_clarification=true, items=[],
+   clarification_question=short Thai question listing examples
+   (e.g. "ข้าวอะไรคะ? ข้าวเปล่า ข้าวผัด หรือข้าวมันไก่?",
+         "ขนมอะไรคะ? คุกกี้ เค้ก หรือขนมไทย?",
+         "ก๋วยเตี๋ยวอะไรคะ? ก๋วยเตี๋ยวเรือ ราดหน้า หรือผัดซีอิ๊ว?").
+   DO NOT fabricate nutrition values when the food is too vague.
+
+C) Food specific enough to estimate (single dish or multiple):
+   is_food=true, needs_clarification=false,
+   items = array with ONE entry per distinct dish. ALWAYS return at least
+   one item in this state. If the user listed multiple foods (e.g.
+   "ผัดกะเพรา + ไข่ดาว + น้ำส้ม", "pad thai and a coke"), return one
+   item per food.
+
+Per-item rules:
+- food_name_th = name in Thai (always fill if you can).
+- food_name_en = English transliteration / translation.
+- quantity_text = the exact quantity phrase if user gave one ("2 จาน",
+  "100g", "1 bowl"), else null. Default = one standard Thai serving.
+- meal_type = infer from cues in the message if any, else null.
+- kcal, protein_g, carbs_g, fat_g = realistic values for the consumed
+  quantity (scale by quantity_text). Be conservative; never guess wildly.
+- confidence = 0.0 to 1.0.
 
 Language rules:
-- All user-facing text in your output (food_name_th, reason) MUST be in Thai.
-- food_name_en is the English transliteration/translation. Keep it short.
-- Never use Indonesian or any other language in your output.
-
-Content rules:
-- Thai food is your specialty. Recognize common Thai dishes by name (ข้าวผัด, ผัดกะเพรา, ส้มตำ, ต้มยำ, ก๋วยเตี๋ยว, etc.).
-- Estimate values for one standard Thai serving unless the user specifies a quantity.
-- If quantity is given (e.g. "2 plates", "100g", "1 bowl"), scale the values.
-- Use realistic kcal/macros; never invent or guess wildly.
-- If the message is a greeting, question, command, or anything not about food just eaten, set is_food=false with a short Thai reason like "นั่นไม่ใช่อาหารนะ" or "บอกชื่ออาหารที่ทานหน่อย".
-- Provide both Thai and English names when known. Use null when you don't know one.
-- meal_type: infer from time-of-day cues in the message if any (e.g. "breakfast"), else null.
-- confidence: 0.0 to 1.0 reflecting your certainty.
+- food_name_th, reason, clarification_question MUST be in Thai.
+- food_name_en is short English. Never Indonesian or other languages.
 
 Never give medical advice. Stay short and factual.`;
+
+const ITEM_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    food_name_th: { type: ['string', 'null'] },
+    food_name_en: { type: ['string', 'null'] },
+    quantity_text: { type: ['string', 'null'] },
+    meal_type: {
+      type: ['string', 'null'],
+      enum: ['breakfast', 'lunch', 'dinner', 'snack', null],
+    },
+    kcal: { type: 'number' },
+    protein_g: { type: 'number' },
+    carbs_g: { type: 'number' },
+    fat_g: { type: 'number' },
+    confidence: { type: 'number' },
+  },
+  required: [
+    'food_name_th',
+    'food_name_en',
+    'quantity_text',
+    'meal_type',
+    'kcal',
+    'protein_g',
+    'carbs_g',
+    'fat_g',
+    'confidence',
+  ],
+} as const;
 
 const JSON_SCHEMA = {
   name: 'food_parser_result',
@@ -57,32 +114,17 @@ const JSON_SCHEMA = {
     additionalProperties: false,
     properties: {
       is_food: { type: 'boolean' },
-      food_name_th: { type: ['string', 'null'] },
-      food_name_en: { type: ['string', 'null'] },
-      quantity_text: { type: ['string', 'null'] },
-      meal_type: {
-        type: ['string', 'null'],
-        enum: ['breakfast', 'lunch', 'dinner', 'snack', null],
-      },
-      kcal: { type: 'number' },
-      protein_g: { type: 'number' },
-      carbs_g: { type: 'number' },
-      fat_g: { type: 'number' },
-      confidence: { type: 'number' },
+      needs_clarification: { type: 'boolean' },
+      clarification_question: { type: ['string', 'null'] },
       reason: { type: ['string', 'null'] },
+      items: { type: 'array', items: ITEM_SCHEMA },
     },
     required: [
       'is_food',
-      'food_name_th',
-      'food_name_en',
-      'quantity_text',
-      'meal_type',
-      'kcal',
-      'protein_g',
-      'carbs_g',
-      'fat_g',
-      'confidence',
+      'needs_clarification',
+      'clarification_question',
       'reason',
+      'items',
     ],
   },
 } as const;
@@ -112,7 +154,7 @@ export const parseTextToFoodLog = async (
         type: 'json_schema',
         json_schema: JSON_SCHEMA,
       },
-      max_tokens: 250,
+      max_tokens: 600,
       temperature: 0.2,
     });
 
