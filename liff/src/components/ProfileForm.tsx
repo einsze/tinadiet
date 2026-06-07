@@ -13,11 +13,11 @@ const ACTIVITY_OPTIONS: ReadonlyArray<{
   label: string;
   hint: string;
 }> = [
-  { value: 'sedentary', label: 'Sedentary', hint: 'Sedikit/tidak olahraga' },
-  { value: 'light', label: 'Light', hint: 'Olahraga ringan 1–3x/minggu' },
-  { value: 'moderate', label: 'Moderate', hint: 'Olahraga sedang 3–5x/minggu' },
-  { value: 'active', label: 'Active', hint: 'Olahraga berat 6–7x/minggu' },
-  { value: 'very_active', label: 'Very active', hint: 'Atlet / kerja fisik berat' },
+  { value: 'sedentary', label: 'Sedentary', hint: 'ไม่ค่อยออกกำลังกาย' },
+  { value: 'light', label: 'Light', hint: 'ออกกำลังกายเบาๆ 1–3 ครั้ง/สัปดาห์' },
+  { value: 'moderate', label: 'Moderate', hint: 'ออกกำลังกายปานกลาง 3–5 ครั้ง/สัปดาห์' },
+  { value: 'active', label: 'Active', hint: 'ออกกำลังกายหนัก 6–7 ครั้ง/สัปดาห์' },
+  { value: 'very_active', label: 'Very active', hint: 'นักกีฬา / งานหนัก' },
 ];
 
 const GOAL_OPTIONS: ReadonlyArray<{ value: GoalType; label: string; hint: string }> = [
@@ -119,7 +119,7 @@ export const ProfileForm = ({ user, onSaved }: Props) => {
       <header>
         <h2 className="text-xl font-semibold text-slate-900">Set up your profile</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Isi data berikut agar Tina bisa hitung target kalori harian Anda.
+          กรอกข้อมูลเพื่อให้ Tina คำนวณเป้าหมายแคลอรี่ต่อวัน
         </p>
       </header>
 

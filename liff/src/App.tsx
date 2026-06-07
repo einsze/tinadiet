@@ -93,8 +93,8 @@ const App = () => {
           <StatusBadge label="Login required" tone="warn" />
           <p className="mt-3 text-sm text-slate-600">
             {inLine
-              ? 'Anda di dalam LINE app tapi belum login. Tap tombol di bawah untuk login.'
-              : 'Buka halaman ini dari LINE app untuk auto-login. Atau tap tombol di bawah untuk login via LINE OAuth.'}
+              ? 'คุณอยู่ใน LINE app แต่ยังไม่ได้ล็อกอิน แตะปุ่มด้านล่างเพื่อล็อกอิน'
+              : 'เปิดหน้านี้ผ่าน LINE app เพื่อล็อกอินอัตโนมัติ หรือแตะปุ่มด้านล่างเพื่อล็อกอินผ่าน LINE OAuth'}
           </p>
           <button
             type="button"

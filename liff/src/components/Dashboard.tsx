@@ -175,12 +175,10 @@ export const Dashboard = ({ user, onEditProfile }: Props) => {
         {state.kind === 'ready' && state.logs.length === 0 ? (
           <div className="mt-3 rounded-lg border border-dashed border-slate-200 px-4 py-6 text-center">
             <p className="text-sm text-slate-500">
-              Belum ada log hari ini.
+              ยังไม่มีบันทึกอาหารวันนี้
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              Kirim makanan yang Anda makan ke chat TinaDiet untuk log otomatis.
-              <br />
-              <span className="text-slate-300">(Coming in next milestone)</span>
+              พิมพ์อาหารที่ทานในแชต TinaDiet เพื่อบันทึกอัตโนมัติ
             </p>
           </div>
         ) : null}

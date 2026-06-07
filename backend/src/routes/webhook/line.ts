@@ -25,7 +25,7 @@ const isTextMessageEvent = (
 const GREETING_RE =
   /^(hi|hello|halo|hey|yo|hai|ok|okay|thanks|thank you|ขอบคุณ|สวัสดี|ครับ|ค่ะ|haha|lol|tina)(\s+tina)?$/i;
 const HINT_TEXT =
-  'Hi! Saya Tina 🌱\nKirim apa yang Anda makan untuk dicatat otomatis.\nContoh: "ผัดกะเพราไก่ไข่ดาว" atau "1 plate of pad thai"';
+  'สวัสดีค่ะ ฉัน Tina 🌱\nบอกฉันได้เลยว่าวันนี้ทานอะไร ฉันจะคำนวณแคลให้\nตัวอย่าง: "ผัดกะเพราไก่ไข่ดาว" หรือ "1 plate of pad thai"';
 
 type IntentDecision = {
   kind: 'skip_command' | 'skip_greeting' | 'skip_empty' | 'attempt_parse';
@@ -120,7 +120,7 @@ const handleEvent = async (event: WebhookEvent): Promise<void> => {
       const reason = result.reason ?? '';
       const replyText =
         reason.length > 0
-          ? `Hmm, sepertinya itu bukan log makanan.\n${reason}\n\n${HINT_TEXT}`
+          ? `${reason}\n\n${HINT_TEXT}`
           : HINT_TEXT;
       await lineClient.replyMessage({
         replyToken: event.replyToken,
@@ -185,7 +185,7 @@ const handleEvent = async (event: WebhookEvent): Promise<void> => {
       messages: [
         {
           type: 'text',
-          text: 'Maaf, saya belum bisa membaca pesan itu sekarang. Coba lagi sebentar ya.',
+          text: 'ขออภัยค่ะ ยังประมวลผลข้อความไม่ได้ ลองอีกครั้งสักครู่นะคะ',
         },
       ],
     });
