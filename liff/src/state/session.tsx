@@ -15,7 +15,9 @@ import {
   liff,
 } from '../lib/liff.js';
 import { setSessionToken } from '../lib/api.js';
-import { authApi, type ExchangeResponse } from '../api/auth.js';
+import { authApi } from '../api/auth.js';
+import { usersApi } from '../api/users.js';
+import type { User } from '../types/user.js';
 
 export type LiffDebug = {
   inClient: boolean;
@@ -31,12 +33,13 @@ type Status =
   | { kind: 'initializing' }
   | { kind: 'needs_login'; debug: LiffDebug }
   | { kind: 'authenticating' }
-  | { kind: 'authenticated'; user: ExchangeResponse['user']; debug: LiffDebug }
+  | { kind: 'authenticated'; user: User; debug: LiffDebug }
   | { kind: 'error'; message: string; debug?: LiffDebug };
 
 type SessionContextValue = {
   status: Status;
   triggerLogin: () => void;
+  setUser: (user: User) => void;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -63,7 +66,8 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     setStatus({ kind: 'authenticating' });
     const exchanged = await authApi.exchange(idToken);
     setSessionToken(exchanged.session);
-    setStatus({ kind: 'authenticated', user: exchanged.user, debug });
+    const me = await usersApi.me();
+    setStatus({ kind: 'authenticated', user: me.user, debug });
   }, []);
 
   useEffect(() => {
@@ -104,8 +108,14 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     login(window.location.href);
   }, []);
 
+  const setUser = useCallback((user: User) => {
+    setStatus((prev) =>
+      prev.kind === 'authenticated' ? { ...prev, user } : prev
+    );
+  }, []);
+
   return (
-    <SessionContext.Provider value={{ status, triggerLogin }}>
+    <SessionContext.Provider value={{ status, triggerLogin, setUser }}>
       {children}
     </SessionContext.Provider>
   );

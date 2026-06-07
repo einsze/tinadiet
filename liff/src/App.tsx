@@ -1,4 +1,8 @@
+import { useState } from 'react';
 import { useSession, type LiffDebug } from './state/session.js';
+import { isProfileComplete } from './types/user.js';
+import { ProfileForm } from './components/ProfileForm.js';
+import { Dashboard } from './components/Dashboard.js';
 
 const StatusBadge = ({
   label,
@@ -43,10 +47,6 @@ const DebugBox = ({ debug }: { debug: LiffDebug }) => (
         <dd className="inline">{debug.os}</dd>
       </div>
       <div>
-        <dt className="inline text-slate-500">language: </dt>
-        <dd className="inline">{debug.language}</dd>
-      </div>
-      <div>
         <dt className="inline text-slate-500">version: </dt>
         <dd className="inline">{debug.version}</dd>
       </div>
@@ -69,7 +69,8 @@ const Shell = ({ children }: { children: React.ReactNode }) => (
 );
 
 const App = () => {
-  const { status, triggerLogin } = useSession();
+  const { status, triggerLogin, setUser } = useSession();
+  const [forceEdit, setForceEdit] = useState(false);
 
   if (status.kind === 'idle' || status.kind === 'initializing') {
     return (
@@ -141,47 +142,27 @@ const App = () => {
   }
 
   const { user, debug } = status;
+  const completed = isProfileComplete(user);
+
+  if (!completed || forceEdit) {
+    return (
+      <Shell>
+        <ProfileForm
+          user={user}
+          onSaved={(updated) => {
+            setUser(updated);
+            setForceEdit(false);
+          }}
+        />
+        <DebugBox debug={debug} />
+      </Shell>
+    );
+  }
 
   return (
     <Shell>
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <StatusBadge label="Authenticated" tone="success" />
-        <h2 className="mt-4 text-xl font-semibold text-slate-900">
-          Welcome{user.display_name ? `, ${user.display_name}` : ''} 👋
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Sprint 1 milestone 5 — end-to-end auth flow working.
-        </p>
-
-        <dl className="mt-6 divide-y divide-slate-100 text-sm">
-          <div className="flex items-center justify-between py-3">
-            <dt className="text-slate-500">DB user id</dt>
-            <dd className="font-mono text-slate-900">#{user.id}</dd>
-          </div>
-          <div className="flex items-center justify-between py-3">
-            <dt className="text-slate-500">LINE user id</dt>
-            <dd className="font-mono text-xs text-slate-900">
-              {user.line_user_id.slice(0, 8)}…{user.line_user_id.slice(-4)}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between py-3">
-            <dt className="text-slate-500">Display name</dt>
-            <dd className="text-slate-900">{user.display_name ?? '—'}</dd>
-          </div>
-        </dl>
-
-        <DebugBox debug={debug} />
-      </div>
-
-      <div className="mt-6 rounded-xl bg-brand-500/5 border border-brand-500/10 p-6">
-        <h3 className="font-semibold text-brand-900">What&apos;s next</h3>
-        <ul className="mt-2 space-y-1 text-sm text-slate-600">
-          <li>• Profile form (gender, age, height, weight, goal)</li>
-          <li>• Dashboard with daily kcal ring</li>
-          <li>• Food logging (text + photo)</li>
-          <li>• AI coach chat</li>
-        </ul>
-      </div>
+      <Dashboard user={user} onEditProfile={() => setForceEdit(true)} />
+      <DebugBox debug={debug} />
     </Shell>
   );
 };

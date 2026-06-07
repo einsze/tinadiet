@@ -1,6 +1,7 @@
 import type { Statement } from 'better-sqlite3';
 import { db } from '../db/sqlite.js';
-import type { User } from '../domain/types.js';
+import { calculateNutritionGoals } from '../domain/nutrition.js';
+import type { ProfileInput, User } from '../domain/types.js';
 
 const USER_COLUMNS = `
   id, line_user_id, display_name,
@@ -18,6 +19,7 @@ type Stmts = {
   findById: Statement;
   insert: Statement;
   updateDisplayName: Statement;
+  updateProfile: Statement;
 };
 
 let _stmts: Stmts | null = null;
@@ -36,6 +38,24 @@ const stmts = (): Stmts => {
       `UPDATE users
        SET display_name = ?, updated_at = datetime('now')
        WHERE id = ? AND (display_name IS NULL OR display_name != ?)`
+    ),
+    updateProfile: db.prepare(
+      `UPDATE users SET
+         gender             = @gender,
+         date_of_birth      = @date_of_birth,
+         height_cm          = @height_cm,
+         current_weight_kg  = @current_weight_kg,
+         target_weight_kg   = @target_weight_kg,
+         activity_level     = @activity_level,
+         goal_type          = @goal_type,
+         bmr_kcal           = @bmr_kcal,
+         tdee_kcal          = @tdee_kcal,
+         daily_calorie_goal = @daily_calorie_goal,
+         daily_protein_g    = @daily_protein_g,
+         daily_carbs_g      = @daily_carbs_g,
+         daily_fat_g        = @daily_fat_g,
+         updated_at         = datetime('now')
+       WHERE id = @id`
     ),
   };
   return _stmts;
@@ -70,5 +90,31 @@ export const userRepository = {
     const info = s.insert.run(input.line_user_id, input.display_name ?? null);
     const id = Number(info.lastInsertRowid);
     return s.findById.get(id) as User;
+  },
+
+  updateProfile: (userId: number, input: ProfileInput): User => {
+    const s = stmts();
+    const goals = calculateNutritionGoals(input);
+    s.updateProfile.run({
+      id: userId,
+      gender: input.gender,
+      date_of_birth: input.date_of_birth,
+      height_cm: input.height_cm,
+      current_weight_kg: input.current_weight_kg,
+      target_weight_kg: input.target_weight_kg,
+      activity_level: input.activity_level,
+      goal_type: input.goal_type,
+      bmr_kcal: goals.bmr_kcal,
+      tdee_kcal: goals.tdee_kcal,
+      daily_calorie_goal: goals.daily_calorie_goal,
+      daily_protein_g: goals.daily_protein_g,
+      daily_carbs_g: goals.daily_carbs_g,
+      daily_fat_g: goals.daily_fat_g,
+    });
+    const updated = s.findById.get(userId) as User | undefined;
+    if (updated === undefined) {
+      throw new Error(`updateProfile: user ${userId} not found after update`);
+    }
+    return updated;
   },
 };
