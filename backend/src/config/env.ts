@@ -23,6 +23,10 @@ export const env = {
   SESSION_JWT_SECRET: requireEnv('SESSION_JWT_SECRET'),
 
   DATABASE_URL: process.env.DATABASE_URL ?? 'file:./data/app.db',
+
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? '',
+  OPENAI_MODEL: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+  OPENAI_TIMEOUT_MS: Number(process.env.OPENAI_TIMEOUT_MS ?? 10000),
 } as const;
 
 export type Env = typeof env;

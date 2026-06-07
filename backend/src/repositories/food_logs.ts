@@ -1,6 +1,12 @@
 import type { Statement } from 'better-sqlite3';
 import { db } from '../db/sqlite.js';
-import type { FoodLog, FoodLogTotals } from '../domain/types.js';
+import type {
+  FoodLog,
+  FoodLogSource,
+  FoodLogTotals,
+  MealType,
+} from '../domain/types.js';
+import { todayInTimezone } from '../domain/date.js';
 
 const FOOD_LOG_COLUMNS = `
   id, user_id, logged_at, date, meal_type,
@@ -13,6 +19,8 @@ const FOOD_LOG_COLUMNS = `
 type Stmts = {
   listByUserAndDate: Statement;
   totalsByUserAndDate: Statement;
+  insert: Statement;
+  findById: Statement;
 };
 
 let _stmts: Stmts | null = null;
@@ -36,8 +44,40 @@ const stmts = (): Stmts => {
        FROM food_logs
        WHERE user_id = ? AND date = ?`
     ),
+    insert: db.prepare(
+      `INSERT INTO food_logs (
+         user_id, date, meal_type,
+         food_name_th, food_name_en, quantity_text,
+         kcal, protein_g, carbs_g, fat_g,
+         source, raw_text, confidence
+       ) VALUES (
+         @user_id, @date, @meal_type,
+         @food_name_th, @food_name_en, @quantity_text,
+         @kcal, @protein_g, @carbs_g, @fat_g,
+         @source, @raw_text, @confidence
+       )`
+    ),
+    findById: db.prepare(
+      `SELECT ${FOOD_LOG_COLUMNS} FROM food_logs WHERE id = ?`
+    ),
   };
   return _stmts;
+};
+
+export type FoodLogCreateInput = {
+  user_id: number;
+  user_timezone: string;
+  meal_type: MealType | null;
+  food_name_th: string | null;
+  food_name_en: string | null;
+  quantity_text: string | null;
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  source: FoodLogSource;
+  raw_text: string | null;
+  confidence: number | null;
 };
 
 export const foodLogsRepository = {
@@ -54,5 +94,31 @@ export const foodLogsRepository = {
       fat_g: Math.round(row.fat_g),
       count: row.count,
     };
+  },
+
+  create: (input: FoodLogCreateInput): FoodLog => {
+    const s = stmts();
+    const date = todayInTimezone(input.user_timezone);
+    const info = s.insert.run({
+      user_id: input.user_id,
+      date,
+      meal_type: input.meal_type,
+      food_name_th: input.food_name_th,
+      food_name_en: input.food_name_en,
+      quantity_text: input.quantity_text,
+      kcal: input.kcal,
+      protein_g: input.protein_g,
+      carbs_g: input.carbs_g,
+      fat_g: input.fat_g,
+      source: input.source,
+      raw_text: input.raw_text,
+      confidence: input.confidence,
+    });
+    const id = Number(info.lastInsertRowid);
+    const created = s.findById.get(id) as FoodLog | undefined;
+    if (created === undefined) {
+      throw new Error(`foodLogsRepository.create: row ${id} not found after insert`);
+    }
+    return created;
   },
 };
