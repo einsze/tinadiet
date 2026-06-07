@@ -3,6 +3,7 @@ import express, { type Request, type Response } from 'express';
 import { env } from './config/env.js';
 import { runMigrations } from './db/migrate.js';
 import { dbFilePath } from './db/sqlite.js';
+import apiV1Router from './routes/api/index.js';
 import lineWebhookRouter from './routes/webhook/line.js';
 
 const migrationResult = runMigrations();
@@ -25,6 +26,8 @@ app.set('trust proxy', 1);
 app.use('/webhook', lineWebhookRouter);
 
 app.use(express.json({ limit: '256kb' }));
+
+app.use('/api/v1', apiV1Router);
 
 app.get('/healthz', (_req: Request, res: Response) => {
   res.status(200).json({
