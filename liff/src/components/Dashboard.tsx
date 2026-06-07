@@ -3,6 +3,7 @@ import { foodLogsApi } from '../api/foodLogs.js';
 import type { FoodLog, FoodLogTotals } from '../types/foodLog.js';
 import type { User } from '../types/user.js';
 import { KcalRing } from './KcalRing.js';
+import { ManualLogForm } from './ManualLogForm.js';
 
 const StatRow = ({
   label,
@@ -73,6 +74,8 @@ type LoadState =
 
 export const Dashboard = ({ user, onEditProfile }: Props) => {
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setState({ kind: 'loading' });
@@ -96,6 +99,24 @@ export const Dashboard = ({ user, onEditProfile }: Props) => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const handleDelete = async (log: FoodLog) => {
+    const name = log.food_name_th ?? log.food_name_en ?? log.raw_text ?? 'this log';
+    if (!window.confirm(`ลบ "${name}" ?`)) return;
+    setDeletingId(log.id);
+    try {
+      await foodLogsApi.delete(log.id);
+      await load();
+    } catch (err) {
+      const message =
+        err !== null && typeof err === 'object' && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : String(err);
+      window.alert(`Failed to delete: ${message}`);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const goal = user.daily_calorie_goal ?? 0;
   const proteinGoal = user.daily_protein_g ?? 0;
@@ -155,14 +176,33 @@ export const Dashboard = ({ user, onEditProfile }: Props) => {
       <section className="rounded-xl bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-900">Today&apos;s logs</h3>
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="text-xs font-medium text-brand-700 hover:underline"
-          >
-            Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowAddForm((v) => !v)}
+              className="text-xs font-medium text-brand-700 hover:underline"
+            >
+              {showAddForm ? 'Close' : '+ Add log'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="text-xs font-medium text-brand-700 hover:underline"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
+
+        {showAddForm ? (
+          <ManualLogForm
+            onCancel={() => setShowAddForm(false)}
+            onSaved={() => {
+              setShowAddForm(false);
+              void load();
+            }}
+          />
+        ) : null}
 
         {state.kind === 'loading' ? (
           <p className="mt-3 text-sm text-slate-500">Loading…</p>
@@ -172,11 +212,9 @@ export const Dashboard = ({ user, onEditProfile }: Props) => {
           <p className="mt-3 text-sm text-rose-700">Error: {state.message}</p>
         ) : null}
 
-        {state.kind === 'ready' && state.logs.length === 0 ? (
+        {state.kind === 'ready' && state.logs.length === 0 && !showAddForm ? (
           <div className="mt-3 rounded-lg border border-dashed border-slate-200 px-4 py-6 text-center">
-            <p className="text-sm text-slate-500">
-              ยังไม่มีบันทึกอาหารวันนี้
-            </p>
+            <p className="text-sm text-slate-500">ยังไม่มีบันทึกอาหารวันนี้</p>
             <p className="mt-1 text-xs text-slate-400">
               พิมพ์อาหารที่ทานในแชต TinaDiet เพื่อบันทึกอัตโนมัติ
             </p>
@@ -185,29 +223,55 @@ export const Dashboard = ({ user, onEditProfile }: Props) => {
 
         {state.kind === 'ready' && state.logs.length > 0 ? (
           <ul className="mt-3 divide-y divide-slate-100">
-            {state.logs.map((log) => (
-              <li key={log.id} className="flex items-start justify-between py-3">
-                <div>
-                  <div className="text-sm font-medium text-slate-900">
-                    {log.food_name_th ?? log.food_name_en ?? log.raw_text ?? 'Food'}
+            {state.logs.map((log) => {
+              const isDeleting = deletingId === log.id;
+              return (
+                <li
+                  key={log.id}
+                  className="flex items-start gap-2 py-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-slate-900">
+                      {log.food_name_th ?? log.food_name_en ?? log.raw_text ?? 'Food'}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {log.quantity_text !== null ? `${log.quantity_text} · ` : ''}
+                      {log.meal_type ?? log.source}
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-500">
-                    {log.quantity_text !== null ? `${log.quantity_text} · ` : ''}
-                    {log.meal_type ?? log.source}
+                  <div className="text-right text-sm shrink-0">
+                    <div className="font-semibold text-slate-900">
+                      {Math.round(log.kcal)}
+                      <span className="ml-0.5 text-xs font-normal text-slate-500">kcal</span>
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      {Math.round(log.protein_g)}p · {Math.round(log.carbs_g)}c ·{' '}
+                      {Math.round(log.fat_g)}f
+                    </div>
                   </div>
-                </div>
-                <div className="text-right text-sm">
-                  <div className="font-semibold text-slate-900">
-                    {Math.round(log.kcal)}
-                    <span className="ml-0.5 text-xs font-normal text-slate-500">kcal</span>
-                  </div>
-                  <div className="text-xs text-slate-400">
-                    {Math.round(log.protein_g)}p · {Math.round(log.carbs_g)}c ·{' '}
-                    {Math.round(log.fat_g)}f
-                  </div>
-                </div>
-              </li>
-            ))}
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(log)}
+                    disabled={isDeleting}
+                    aria-label={`Delete ${log.food_name_th ?? 'log'}`}
+                    className="shrink-0 rounded-full p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    >
+                      <line x1="3" y1="3" x2="11" y2="11" />
+                      <line x1="11" y1="3" x2="3" y2="11" />
+                    </svg>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         ) : null}
       </section>

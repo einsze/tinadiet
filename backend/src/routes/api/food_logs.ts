@@ -126,4 +126,40 @@ router.post('/', requireAuth, (req: Request, res: Response) => {
   }
 });
 
+router.delete('/:id', requireAuth, (req: Request, res: Response) => {
+  const session = req.session;
+  if (!session) {
+    res
+      .status(401)
+      .json({ error: { code: 'UNAUTHORIZED', message: 'No session' } });
+    return;
+  }
+
+  const idParam = Number(req.params.id);
+  if (!Number.isInteger(idParam) || idParam <= 0) {
+    res
+      .status(400)
+      .json({ error: { code: 'BAD_REQUEST', message: 'id must be a positive integer' } });
+    return;
+  }
+
+  const deleted = foodLogsRepository.deleteByIdAndUser(idParam, session.uid);
+  if (!deleted) {
+    res
+      .status(404)
+      .json({ error: { code: 'NOT_FOUND', message: 'Food log not found' } });
+    return;
+  }
+
+  console.log(
+    JSON.stringify({
+      level: 'info',
+      msg: 'food_logs.delete.success',
+      db_user_id: session.uid,
+      log_id: idParam,
+    })
+  );
+  res.status(204).end();
+});
+
 export default router;

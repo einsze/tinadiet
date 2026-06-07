@@ -21,6 +21,7 @@ type Stmts = {
   totalsByUserAndDate: Statement;
   insert: Statement;
   findById: Statement;
+  deleteByIdAndUser: Statement;
 };
 
 let _stmts: Stmts | null = null;
@@ -60,6 +61,9 @@ const stmts = (): Stmts => {
     findById: db.prepare(
       `SELECT ${FOOD_LOG_COLUMNS} FROM food_logs WHERE id = ?`
     ),
+    deleteByIdAndUser: db.prepare(
+      `DELETE FROM food_logs WHERE id = ? AND user_id = ?`
+    ),
   };
   return _stmts;
 };
@@ -94,6 +98,11 @@ export const foodLogsRepository = {
       fat_g: Math.round(row.fat_g),
       count: row.count,
     };
+  },
+
+  deleteByIdAndUser: (id: number, userId: number): boolean => {
+    const info = stmts().deleteByIdAndUser.run(id, userId);
+    return info.changes > 0;
   },
 
   create: (input: FoodLogCreateInput): FoodLog => {

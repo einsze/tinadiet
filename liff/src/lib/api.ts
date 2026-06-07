@@ -45,6 +45,10 @@ const request = async <T>(
     headers: buildHeaders(init?.headers),
   });
 
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
   const text = await res.text();
   const body: unknown = text.length > 0 ? JSON.parse(text) : null;
 
@@ -72,4 +76,5 @@ export const api = {
       method: 'PATCH',
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
+  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
