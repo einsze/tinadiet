@@ -27,6 +27,11 @@ export const env = {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? '',
   OPENAI_MODEL: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
   OPENAI_TIMEOUT_MS: Number(process.env.OPENAI_TIMEOUT_MS ?? 10000),
+
+  CRON_ENABLED: (process.env.CRON_ENABLED ?? 'true').toLowerCase() === 'true',
+  CRON_TZ: process.env.CRON_TZ ?? 'Asia/Bangkok',
+  DAILY_SUMMARY_CRON: process.env.DAILY_SUMMARY_CRON ?? '0 21 * * *',
+  JOBS_TRIGGER_SECRET: process.env.JOBS_TRIGGER_SECRET ?? '',
 } as const;
 
 export type Env = typeof env;

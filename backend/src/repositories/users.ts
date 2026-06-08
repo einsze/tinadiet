@@ -20,6 +20,7 @@ type Stmts = {
   insert: Statement;
   updateDisplayName: Statement;
   updateProfile: Statement;
+  listProfileCompleted: Statement;
 };
 
 let _stmts: Stmts | null = null;
@@ -57,6 +58,12 @@ const stmts = (): Stmts => {
          updated_at         = datetime('now')
        WHERE id = @id`
     ),
+    listProfileCompleted: db.prepare(
+      `SELECT ${USER_COLUMNS}
+       FROM users
+       WHERE daily_calorie_goal IS NOT NULL
+       ORDER BY id ASC`
+    ),
   };
   return _stmts;
 };
@@ -90,6 +97,10 @@ export const userRepository = {
     const info = s.insert.run(input.line_user_id, input.display_name ?? null);
     const id = Number(info.lastInsertRowid);
     return s.findById.get(id) as User;
+  },
+
+  listProfileCompleted: (): User[] => {
+    return stmts().listProfileCompleted.all() as User[];
   },
 
   updateProfile: (userId: number, input: ProfileInput): User => {

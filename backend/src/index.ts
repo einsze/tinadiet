@@ -6,6 +6,8 @@ import { runMigrations } from './db/migrate.js';
 import { dbFilePath } from './db/sqlite.js';
 import apiV1Router from './routes/api/index.js';
 import lineWebhookRouter from './routes/webhook/line.js';
+import internalJobsRouter from './routes/internal/jobs.js';
+import { startCronJobs } from './jobs/index.js';
 
 const migrationResult = runMigrations();
 console.log(
@@ -56,6 +58,7 @@ app.use(
 app.use(express.json({ limit: '256kb' }));
 
 app.use('/api/v1', apiV1Router);
+app.use('/internal/jobs', internalJobsRouter);
 
 app.get('/healthz', (_req: Request, res: Response) => {
   res.status(200).json({
@@ -84,6 +87,7 @@ const server = app.listen(env.PORT, () => {
     env: env.NODE_ENV,
     commit: env.COMMIT_SHA.slice(0, 7),
   }));
+  startCronJobs();
 });
 
 const shutdown = (signal: string) => {
