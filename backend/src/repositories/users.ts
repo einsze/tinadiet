@@ -20,6 +20,7 @@ type Stmts = {
   insert: Statement;
   updateDisplayName: Statement;
   updateProfile: Statement;
+  updateCurrentWeight: Statement;
   listProfileCompleted: Statement;
 };
 
@@ -64,6 +65,11 @@ const stmts = (): Stmts => {
        WHERE daily_calorie_goal IS NOT NULL
        ORDER BY id ASC`
     ),
+    updateCurrentWeight: db.prepare(
+      `UPDATE users
+       SET current_weight_kg = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    ),
   };
   return _stmts;
 };
@@ -101,6 +107,51 @@ export const userRepository = {
 
   listProfileCompleted: (): User[] => {
     return stmts().listProfileCompleted.all() as User[];
+  },
+
+  syncWeightChange: (userId: number, weightKg: number): User | undefined => {
+    const s = stmts();
+    const existing = s.findById.get(userId) as User | undefined;
+    if (existing === undefined) return undefined;
+    const profileComplete =
+      existing.gender !== null &&
+      existing.date_of_birth !== null &&
+      existing.height_cm !== null &&
+      existing.activity_level !== null &&
+      existing.goal_type !== null &&
+      existing.target_weight_kg !== null;
+
+    if (!profileComplete) {
+      s.updateCurrentWeight.run(weightKg, userId);
+      return s.findById.get(userId) as User;
+    }
+
+    const goals = calculateNutritionGoals({
+      gender: existing.gender!,
+      date_of_birth: existing.date_of_birth!,
+      height_cm: existing.height_cm!,
+      current_weight_kg: weightKg,
+      target_weight_kg: existing.target_weight_kg!,
+      activity_level: existing.activity_level!,
+      goal_type: existing.goal_type!,
+    });
+    s.updateProfile.run({
+      id: userId,
+      gender: existing.gender,
+      date_of_birth: existing.date_of_birth,
+      height_cm: existing.height_cm,
+      current_weight_kg: weightKg,
+      target_weight_kg: existing.target_weight_kg,
+      activity_level: existing.activity_level,
+      goal_type: existing.goal_type,
+      bmr_kcal: goals.bmr_kcal,
+      tdee_kcal: goals.tdee_kcal,
+      daily_calorie_goal: goals.daily_calorie_goal,
+      daily_protein_g: goals.daily_protein_g,
+      daily_carbs_g: goals.daily_carbs_g,
+      daily_fat_g: goals.daily_fat_g,
+    });
+    return s.findById.get(userId) as User;
   },
 
   updateProfile: (userId: number, input: ProfileInput): User => {

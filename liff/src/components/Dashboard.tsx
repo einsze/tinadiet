@@ -4,6 +4,7 @@ import type { FoodLog, FoodLogTotals } from '../types/foodLog.js';
 import type { User } from '../types/user.js';
 import { KcalRing } from './KcalRing.js';
 import { ManualLogForm } from './ManualLogForm.js';
+import { WeightSection } from './WeightSection.js';
 
 const StatRow = ({
   label,
@@ -311,6 +312,8 @@ export const Dashboard = ({ user, onEditProfile }: Props) => {
           </ul>
         ) : null}
       </section>
+
+      <WeightSection />
 
       <section className="rounded-xl bg-white p-6 shadow-sm">
         <h3 className="text-sm font-semibold text-slate-900">Your profile</h3>

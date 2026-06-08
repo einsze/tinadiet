@@ -59,4 +59,21 @@ export const migrations: ReadonlyArray<Migration> = [
       CREATE INDEX idx_food_logs_logged_at ON food_logs(logged_at);
     `,
   },
+  {
+    name: '0003_weight_logs',
+    sql: `
+      CREATE TABLE weight_logs (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        logged_at   TEXT NOT NULL DEFAULT (datetime('now')),
+        date        TEXT NOT NULL,
+        weight_kg   REAL NOT NULL,
+        note        TEXT,
+        source      TEXT NOT NULL CHECK(source IN ('manual','chat')),
+        created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX idx_weight_logs_user_date ON weight_logs(user_id, date);
+      CREATE INDEX idx_weight_logs_user_logged ON weight_logs(user_id, logged_at);
+    `,
+  },
 ];

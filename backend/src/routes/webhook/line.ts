@@ -8,6 +8,7 @@ import {
 import { lineClient, lineSignatureConfig } from '../../line/client.js';
 import { userRepository } from '../../repositories/users.js';
 import { foodLogsRepository } from '../../repositories/food_logs.js';
+import { weightLogsRepository } from '../../repositories/weight_logs.js';
 import {
   parseTextToFoodLog,
   FoodParserError,
@@ -27,6 +28,25 @@ const GREETING_RE =
 const HINT_TEXT =
   'สวัสดีค่ะ ฉัน Tina 🌱\nบอกฉันได้เลยว่าวันนี้ทานอะไร ฉันจะคำนวณแคลให้\nตัวอย่าง: "ผัดกะเพราไก่ไข่ดาว" หรือ "1 plate of pad thai"\n\nพิมพ์ "วันนี้" เพื่อดูบันทึกของวันนี้';
 
+const WEIGHT_LOG_RE =
+  /^\s*(?:น้ำหนัก|ชั่ง(?:น้ำหนัก)?|weight|wt)\s*[:=]?\s*(\d{2,3}(?:\.\d{1,2})?)\s*(?:kg|กก|กิโล)?\s*$/i;
+const WEIGHT_LOG_BARE_RE =
+  /^\s*(\d{2,3}(?:\.\d{1,2})?)\s*(?:kg|กก|กิโล)\s*$/i;
+
+const parseWeightFromText = (text: string): number | null => {
+  const m1 = text.match(WEIGHT_LOG_RE);
+  if (m1 && m1[1]) {
+    const w = Number(m1[1]);
+    if (w >= 20 && w <= 400) return w;
+  }
+  const m2 = text.match(WEIGHT_LOG_BARE_RE);
+  if (m2 && m2[1]) {
+    const w = Number(m2[1]);
+    if (w >= 20 && w <= 400) return w;
+  }
+  return null;
+};
+
 const isShowLogsRequest = (text: string): boolean => {
   const t = text.trim().toLowerCase();
   return (
@@ -43,18 +63,19 @@ const isShowLogsRequest = (text: string): boolean => {
   );
 };
 
-type IntentDecision = {
-  kind:
-    | 'skip_command'
-    | 'skip_greeting'
-    | 'skip_empty'
-    | 'show_logs'
-    | 'attempt_parse';
-};
+type IntentDecision =
+  | { kind: 'skip_command' }
+  | { kind: 'skip_greeting' }
+  | { kind: 'skip_empty' }
+  | { kind: 'show_logs' }
+  | { kind: 'log_weight'; weight_kg: number }
+  | { kind: 'attempt_parse' };
 
 const classifyIntent = (text: string): IntentDecision => {
   const trimmed = text.trim();
   if (trimmed.length === 0) return { kind: 'skip_empty' };
+  const weight = parseWeightFromText(trimmed);
+  if (weight !== null) return { kind: 'log_weight', weight_kg: weight };
   if (isShowLogsRequest(trimmed)) return { kind: 'show_logs' };
   if (trimmed.startsWith('/')) return { kind: 'skip_command' };
   if (trimmed.length < 3) return { kind: 'skip_greeting' };
@@ -139,6 +160,51 @@ const handleEvent = async (event: WebhookEvent): Promise<void> => {
   );
 
   const intent = classifyIntent(text);
+
+  if (intent.kind === 'log_weight') {
+    const log = weightLogsRepository.create({
+      user_id: user.id,
+      user_timezone: user.timezone,
+      weight_kg: intent.weight_kg,
+      note: null,
+      source: 'chat',
+    });
+    const updated = userRepository.syncWeightChange(user.id, intent.weight_kg);
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.weight_log.created',
+        db_user_id: user.id,
+        log_id: log.id,
+        weight_kg: intent.weight_kg,
+        recomputed_goals:
+          updated?.daily_calorie_goal !== null && updated?.daily_calorie_goal !== undefined,
+      })
+    );
+    const lines: string[] = [`✅ บันทึกน้ำหนัก ${intent.weight_kg} kg`];
+    if (
+      updated !== undefined &&
+      updated.target_weight_kg !== null
+    ) {
+      const diff = intent.weight_kg - updated.target_weight_kg;
+      if (Math.abs(diff) < 0.5) {
+        lines.push(`ถึงเป้าหมายแล้วค่ะ! 🎯`);
+      } else if (diff > 0) {
+        lines.push(`เป้าหมาย: ${updated.target_weight_kg} kg · ห่าง ${diff.toFixed(1)} kg`);
+      } else {
+        lines.push(`เป้าหมาย: ${updated.target_weight_kg} kg · ขาด ${Math.abs(diff).toFixed(1)} kg`);
+      }
+    }
+    if (updated?.daily_calorie_goal !== null && updated?.daily_calorie_goal !== undefined) {
+      lines.push(`เป้าหมายแคลใหม่: ${updated.daily_calorie_goal} kcal/วัน`);
+    }
+    await lineClient.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{ type: 'text', text: lines.join('\n') }],
+    });
+    return;
+  }
+
   if (intent.kind === 'show_logs') {
     console.log(
       JSON.stringify({
