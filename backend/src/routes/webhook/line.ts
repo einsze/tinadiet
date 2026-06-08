@@ -4,14 +4,22 @@ import {
   type WebhookEvent,
   type MessageEvent,
   type TextEventMessage,
+  type ImageEventMessage,
 } from '@line/bot-sdk';
-import { lineClient, lineSignatureConfig } from '../../line/client.js';
+import {
+  lineClient,
+  lineSignatureConfig,
+  fetchMessageContentAsBase64,
+} from '../../line/client.js';
+import { env } from '../../config/env.js';
 import { userRepository } from '../../repositories/users.js';
 import { foodLogsRepository } from '../../repositories/food_logs.js';
 import { weightLogsRepository } from '../../repositories/weight_logs.js';
 import {
   parseTextToFoodLog,
+  parseImageToFoodLog,
   FoodParserError,
+  type FoodParserResult,
 } from '../../services/food_parser.js';
 import { todayInTimezone } from '../../domain/date.js';
 import type { FoodLog, FoodLogTotals, User } from '../../domain/types.js';
@@ -22,6 +30,11 @@ const isTextMessageEvent = (
   event: WebhookEvent
 ): event is MessageEvent & { message: TextEventMessage } =>
   event.type === 'message' && event.message.type === 'text';
+
+const isImageMessageEvent = (
+  event: WebhookEvent
+): event is MessageEvent & { message: ImageEventMessage } =>
+  event.type === 'message' && event.message.type === 'image';
 
 const GREETING_RE =
   /^(hi|hello|halo|hey|yo|hai|ok|okay|thanks|thank you|ขอบคุณ|สวัสดี|ครับ|ค่ะ|haha|lol|tina)(\s+tina)?$/i;
@@ -140,9 +153,93 @@ const formatMultiConfirmation = (user: User, items: SavedItem[]): string => {
   return `✅ บันทึก ${items.length} รายการ\n${lines.join('\n')}\nรวมครั้งนี้: ${Math.round(sessionKcal)} kcal\n${formatTodayLine(user)}`;
 };
 
-const handleEvent = async (event: WebhookEvent): Promise<void> => {
-  if (!isTextMessageEvent(event)) return;
+const replyToParsedResult = async (
+  user: User,
+  result: FoodParserResult,
+  replyToken: string,
+  rawText: string | null,
+  source: 'chat_ai' | 'photo'
+): Promise<void> => {
+  if (!result.is_food) {
+    const reason = result.reason ?? '';
+    const replyText =
+      reason.length > 0 ? `${reason}\n\n${HINT_TEXT}` : HINT_TEXT;
+    await lineClient.replyMessage({
+      replyToken,
+      messages: [{ type: 'text', text: replyText }],
+    });
+    return;
+  }
 
+  if (result.needs_clarification) {
+    const question =
+      result.clarification_question ??
+      'บอกชื่ออาหารที่ทานให้ละเอียดขึ้นได้ไหมคะ?';
+    await lineClient.replyMessage({
+      replyToken,
+      messages: [{ type: 'text', text: question }],
+    });
+    return;
+  }
+
+  if (result.items.length === 0) {
+    await lineClient.replyMessage({
+      replyToken,
+      messages: [{ type: 'text', text: HINT_TEXT }],
+    });
+    return;
+  }
+
+  const savedItems: SavedItem[] = result.items.map((item) => {
+    const log = foodLogsRepository.create({
+      user_id: user.id,
+      user_timezone: user.timezone,
+      meal_type: item.meal_type,
+      food_name_th: item.food_name_th,
+      food_name_en: item.food_name_en,
+      quantity_text: item.quantity_text,
+      kcal: item.kcal,
+      protein_g: item.protein_g,
+      carbs_g: item.carbs_g,
+      fat_g: item.fat_g,
+      source,
+      raw_text: rawText,
+      confidence: item.confidence,
+    });
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.food_log.created',
+        db_user_id: user.id,
+        log_id: log.id,
+        kcal: log.kcal,
+        source,
+      })
+    );
+    return {
+      food_name_th: log.food_name_th,
+      food_name_en: log.food_name_en,
+      kcal: log.kcal,
+      protein_g: log.protein_g,
+      carbs_g: log.carbs_g,
+      fat_g: log.fat_g,
+    };
+  });
+
+  const replyText =
+    savedItems.length === 1
+      ? formatSingleConfirmation(user, savedItems[0]!)
+      : formatMultiConfirmation(user, savedItems);
+
+  await lineClient.replyMessage({
+    replyToken,
+    messages: [{ type: 'text', text: replyText }],
+  });
+};
+
+const handleTextEvent = async (
+  event: MessageEvent & { message: TextEventMessage }
+): Promise<void> => {
   const lineUserId = event.source.userId;
   if (!lineUserId) return;
 
@@ -256,81 +353,7 @@ const handleEvent = async (event: WebhookEvent): Promise<void> => {
         item_count: result.items.length,
       })
     );
-
-    if (!result.is_food) {
-      const reason = result.reason ?? '';
-      const replyText =
-        reason.length > 0 ? `${reason}\n\n${HINT_TEXT}` : HINT_TEXT;
-      await lineClient.replyMessage({
-        replyToken: event.replyToken,
-        messages: [{ type: 'text', text: replyText }],
-      });
-      return;
-    }
-
-    if (result.needs_clarification) {
-      const question =
-        result.clarification_question ??
-        'บอกชื่ออาหารที่ทานให้ละเอียดขึ้นได้ไหมคะ?';
-      await lineClient.replyMessage({
-        replyToken: event.replyToken,
-        messages: [{ type: 'text', text: question }],
-      });
-      return;
-    }
-
-    if (result.items.length === 0) {
-      await lineClient.replyMessage({
-        replyToken: event.replyToken,
-        messages: [{ type: 'text', text: HINT_TEXT }],
-      });
-      return;
-    }
-
-    const savedItems: SavedItem[] = result.items.map((item) => {
-      const log = foodLogsRepository.create({
-        user_id: user.id,
-        user_timezone: user.timezone,
-        meal_type: item.meal_type,
-        food_name_th: item.food_name_th,
-        food_name_en: item.food_name_en,
-        quantity_text: item.quantity_text,
-        kcal: item.kcal,
-        protein_g: item.protein_g,
-        carbs_g: item.carbs_g,
-        fat_g: item.fat_g,
-        source: 'chat_ai',
-        raw_text: text,
-        confidence: item.confidence,
-      });
-      console.log(
-        JSON.stringify({
-          level: 'info',
-          msg: 'webhook.food_log.created',
-          db_user_id: user.id,
-          log_id: log.id,
-          kcal: log.kcal,
-        })
-      );
-      return {
-        food_name_th: log.food_name_th,
-        food_name_en: log.food_name_en,
-        kcal: log.kcal,
-        protein_g: log.protein_g,
-        carbs_g: log.carbs_g,
-        fat_g: log.fat_g,
-      };
-    });
-
-    const replyText =
-      savedItems.length === 1
-        ? formatSingleConfirmation(user, savedItems[0]!)
-        : formatMultiConfirmation(user, savedItems);
-
-    await lineClient.replyMessage({
-      replyToken: event.replyToken,
-      messages: [{ type: 'text', text: replyText }],
-    });
+    await replyToParsedResult(user, result, event.replyToken, text, 'chat_ai');
   } catch (err) {
     const isParserErr = err instanceof FoodParserError;
     console.error(
@@ -351,6 +374,92 @@ const handleEvent = async (event: WebhookEvent): Promise<void> => {
         },
       ],
     });
+  }
+};
+
+const handleImageEvent = async (
+  event: MessageEvent & { message: ImageEventMessage }
+): Promise<void> => {
+  const lineUserId = event.source.userId;
+  if (!lineUserId) return;
+
+  const user = userRepository.upsertFromLine({ line_user_id: lineUserId });
+  const today = todayInTimezone(user.timezone);
+  const count = foodLogsRepository.countPhotoLogsToday(user.id, today);
+
+  if (count >= env.PHOTO_DAILY_LIMIT) {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.vision.quota_exceeded',
+        db_user_id: user.id,
+        count,
+        limit: env.PHOTO_DAILY_LIMIT,
+      })
+    );
+    await lineClient.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: 'text',
+          text: `วันนี้ส่งรูปครบ ${env.PHOTO_DAILY_LIMIT} รูปแล้วค่ะ\nลองพิมพ์ชื่ออาหารแทนนะคะ พรุ่งนี้ส่งรูปได้อีก`,
+        },
+      ],
+    });
+    return;
+  }
+
+  try {
+    const { base64, mimeType } = await fetchMessageContentAsBase64(
+      event.message.id
+    );
+    const { result, usage } = await parseImageToFoodLog(base64, mimeType);
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.vision.usage',
+        db_user_id: user.id,
+        model: usage.model,
+        input_tokens: usage.input_tokens,
+        output_tokens: usage.output_tokens,
+        latency_ms: usage.latency_ms,
+        is_food: result.is_food,
+        needs_clarification: result.needs_clarification,
+        item_count: result.items.length,
+      })
+    );
+    await replyToParsedResult(user, result, event.replyToken, null, 'photo');
+  } catch (err) {
+    const isParserErr = err instanceof FoodParserError;
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        msg: 'webhook.vision.failed',
+        db_user_id: user.id,
+        is_parser_error: isParserErr,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    );
+    await lineClient.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: 'text',
+          text: 'ขออภัยค่ะ ยังประมวลผลรูปไม่ได้ ลองส่งใหม่หรือพิมพ์ชื่ออาหารก็ได้นะคะ',
+        },
+      ],
+    });
+  }
+};
+
+const handleEvent = async (event: WebhookEvent): Promise<void> => {
+  if (isTextMessageEvent(event)) {
+    await handleTextEvent(event);
+    return;
+  }
+  if (isImageMessageEvent(event)) {
+    await handleImageEvent(event);
+    return;
   }
 };
 

@@ -23,6 +23,9 @@ type Stmts = {
   findById: Statement;
   deleteByIdAndUser: Statement;
   updateByIdAndUser: Statement;
+  countPhotoLogsToday: Statement;
+  weeklyAggregateByUser: Statement;
+  distinctLogDatesRecent: Statement;
 };
 
 let _stmts: Stmts | null = null;
@@ -78,8 +81,40 @@ const stmts = (): Stmts => {
          updated_at    = datetime('now')
        WHERE id = @id AND user_id = @user_id`
     ),
+    countPhotoLogsToday: db.prepare(
+      `SELECT COUNT(*) AS count
+       FROM food_logs
+       WHERE user_id = ? AND date = ? AND source = 'photo'`
+    ),
+    weeklyAggregateByUser: db.prepare(
+      `SELECT
+         COALESCE(SUM(kcal), 0)       AS sum_kcal,
+         COALESCE(SUM(protein_g), 0)  AS sum_protein_g,
+         COALESCE(SUM(carbs_g), 0)    AS sum_carbs_g,
+         COALESCE(SUM(fat_g), 0)      AS sum_fat_g,
+         COUNT(*)                     AS log_count,
+         COUNT(DISTINCT date)         AS days_logged
+       FROM food_logs
+       WHERE user_id = ? AND date >= ? AND date <= ?`
+    ),
+    distinctLogDatesRecent: db.prepare(
+      `SELECT DISTINCT date
+       FROM food_logs
+       WHERE user_id = ? AND date <= ?
+       ORDER BY date DESC
+       LIMIT ?`
+    ),
   };
   return _stmts;
+};
+
+export type FoodLogsWeeklyAggregate = {
+  sum_kcal: number;
+  sum_protein_g: number;
+  sum_carbs_g: number;
+  sum_fat_g: number;
+  log_count: number;
+  days_logged: number;
 };
 
 export type FoodLogUpdateInput = {
@@ -128,6 +163,46 @@ export const foodLogsRepository = {
   deleteByIdAndUser: (id: number, userId: number): boolean => {
     const info = stmts().deleteByIdAndUser.run(id, userId);
     return info.changes > 0;
+  },
+
+  countPhotoLogsToday: (userId: number, date: string): number => {
+    const row = stmts().countPhotoLogsToday.get(userId, date) as {
+      count: number;
+    };
+    return row.count;
+  },
+
+  weeklyAggregate: (
+    userId: number,
+    startDate: string,
+    endDate: string
+  ): FoodLogsWeeklyAggregate => {
+    const row = stmts().weeklyAggregateByUser.get(
+      userId,
+      startDate,
+      endDate
+    ) as FoodLogsWeeklyAggregate;
+    return {
+      sum_kcal: Math.round(row.sum_kcal),
+      sum_protein_g: Math.round(row.sum_protein_g),
+      sum_carbs_g: Math.round(row.sum_carbs_g),
+      sum_fat_g: Math.round(row.sum_fat_g),
+      log_count: row.log_count,
+      days_logged: row.days_logged,
+    };
+  },
+
+  distinctLogDatesRecent: (
+    userId: number,
+    upToDate: string,
+    limit: number
+  ): string[] => {
+    const rows = stmts().distinctLogDatesRecent.all(
+      userId,
+      upToDate,
+      limit
+    ) as Array<{ date: string }>;
+    return rows.map((r) => r.date);
   },
 
   updateByIdAndUser: (

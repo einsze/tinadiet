@@ -1,7 +1,7 @@
 import { api } from '../lib/api.js';
 import type { ProfileInput, User } from '../types/user.js';
 
-export type MeResponse = { user: User };
+export type MeResponse = { user: User; streak: number };
 
 export const usersApi = {
   me: () => api.get<MeResponse>('/api/v1/users/me'),

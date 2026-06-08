@@ -141,7 +141,7 @@ const App = () => {
     );
   }
 
-  const { user, debug } = status;
+  const { user, streak, debug } = status;
   const completed = isProfileComplete(user);
 
   if (!completed || forceEdit) {
@@ -161,7 +161,11 @@ const App = () => {
 
   return (
     <Shell>
-      <Dashboard user={user} onEditProfile={() => setForceEdit(true)} />
+      <Dashboard
+        user={user}
+        streak={streak}
+        onEditProfile={() => setForceEdit(true)}
+      />
       <DebugBox debug={debug} />
     </Shell>
   );

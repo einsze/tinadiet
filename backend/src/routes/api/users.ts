@@ -2,8 +2,22 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth.js';
 import { userRepository } from '../../repositories/users.js';
+import { foodLogsRepository } from '../../repositories/food_logs.js';
+import { todayInTimezone } from '../../domain/date.js';
+import { computeStreakFromDates } from '../../domain/streak.js';
 
 const router = Router();
+
+const STREAK_LOOKBACK_DAYS = 90;
+
+const computeStreakFor = (userId: number, today: string): number => {
+  const dates = foodLogsRepository.distinctLogDatesRecent(
+    userId,
+    today,
+    STREAK_LOOKBACK_DAYS
+  );
+  return computeStreakFromDates(dates, today);
+};
 
 const profileSchema = z.object({
   gender: z.enum(['male', 'female', 'other']),
@@ -47,7 +61,8 @@ router.get('/me', requireAuth, (req: Request, res: Response) => {
     return;
   }
 
-  res.status(200).json({ user });
+  const streak = computeStreakFor(user.id, todayInTimezone(user.timezone));
+  res.status(200).json({ user, streak });
 });
 
 router.patch('/me', requireAuth, (req: Request, res: Response) => {
@@ -84,7 +99,8 @@ router.patch('/me', requireAuth, (req: Request, res: Response) => {
         daily_calorie_goal: user.daily_calorie_goal,
       })
     );
-    res.status(200).json({ user });
+    const streak = computeStreakFor(user.id, todayInTimezone(user.timezone));
+    res.status(200).json({ user, streak });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(

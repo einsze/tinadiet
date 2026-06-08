@@ -26,11 +26,14 @@ export const env = {
 
   OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? '',
   OPENAI_MODEL: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+  OPENAI_VISION_MODEL: process.env.OPENAI_VISION_MODEL ?? 'gpt-4o',
   OPENAI_TIMEOUT_MS: Number(process.env.OPENAI_TIMEOUT_MS ?? 10000),
+  PHOTO_DAILY_LIMIT: Number(process.env.PHOTO_DAILY_LIMIT ?? 10),
 
   CRON_ENABLED: (process.env.CRON_ENABLED ?? 'true').toLowerCase() === 'true',
   CRON_TZ: process.env.CRON_TZ ?? 'Asia/Bangkok',
   DAILY_SUMMARY_CRON: process.env.DAILY_SUMMARY_CRON ?? '0 21 * * *',
+  WEEKLY_SUMMARY_CRON: process.env.WEEKLY_SUMMARY_CRON ?? '0 8 * * 1',
   JOBS_TRIGGER_SECRET: process.env.JOBS_TRIGGER_SECRET ?? '',
 } as const;
 

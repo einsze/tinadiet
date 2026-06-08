@@ -33,13 +33,13 @@ type Status =
   | { kind: 'initializing' }
   | { kind: 'needs_login'; debug: LiffDebug }
   | { kind: 'authenticating' }
-  | { kind: 'authenticated'; user: User; debug: LiffDebug }
+  | { kind: 'authenticated'; user: User; streak: number; debug: LiffDebug }
   | { kind: 'error'; message: string; debug?: LiffDebug };
 
 type SessionContextValue = {
   status: Status;
   triggerLogin: () => void;
-  setUser: (user: User) => void;
+  setUser: (user: User, streak?: number) => void;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -67,7 +67,12 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     const exchanged = await authApi.exchange(idToken);
     setSessionToken(exchanged.session);
     const me = await usersApi.me();
-    setStatus({ kind: 'authenticated', user: me.user, debug });
+    setStatus({
+      kind: 'authenticated',
+      user: me.user,
+      streak: me.streak,
+      debug,
+    });
   }, []);
 
   useEffect(() => {
@@ -108,10 +113,13 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     login(window.location.href);
   }, []);
 
-  const setUser = useCallback((user: User) => {
-    setStatus((prev) =>
-      prev.kind === 'authenticated' ? { ...prev, user } : prev
-    );
+  const setUser = useCallback((user: User, streak?: number) => {
+    setStatus((prev) => {
+      if (prev.kind !== 'authenticated') return prev;
+      return streak !== undefined
+        ? { ...prev, user, streak }
+        : { ...prev, user };
+    });
   }, []);
 
   return (

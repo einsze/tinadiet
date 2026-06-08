@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { env } from '../config/env.js';
 import { runDailySummary } from './daily_summary.js';
+import { runWeeklySummary } from './weekly_summary.js';
 
 let _started = false;
 
@@ -12,6 +13,7 @@ export const startCronJobs = (): void => {
     );
     return;
   }
+
   cron.schedule(
     env.DAILY_SUMMARY_CRON,
     () => {
@@ -35,12 +37,38 @@ export const startCronJobs = (): void => {
     },
     { timezone: env.CRON_TZ }
   );
+
+  cron.schedule(
+    env.WEEKLY_SUMMARY_CRON,
+    () => {
+      console.log(
+        JSON.stringify({
+          level: 'info',
+          msg: 'jobs.weekly_summary.tick',
+          schedule: env.WEEKLY_SUMMARY_CRON,
+          tz: env.CRON_TZ,
+        })
+      );
+      runWeeklySummary(false).catch((err: unknown) => {
+        console.error(
+          JSON.stringify({
+            level: 'error',
+            msg: 'jobs.weekly_summary.run_failed',
+            error: err instanceof Error ? err.message : String(err),
+          })
+        );
+      });
+    },
+    { timezone: env.CRON_TZ }
+  );
+
   _started = true;
   console.log(
     JSON.stringify({
       level: 'info',
       msg: 'jobs.cron.scheduled',
-      schedule: env.DAILY_SUMMARY_CRON,
+      daily_schedule: env.DAILY_SUMMARY_CRON,
+      weekly_schedule: env.WEEKLY_SUMMARY_CRON,
       tz: env.CRON_TZ,
     })
   );

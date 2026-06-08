@@ -65,6 +65,7 @@ const MacroProgress = ({
 
 type Props = {
   user: User;
+  streak: number;
   onEditProfile: () => void;
 };
 
@@ -73,7 +74,7 @@ type LoadState =
   | { kind: 'ready'; date: string; logs: FoodLog[]; totals: FoodLogTotals }
   | { kind: 'error'; message: string };
 
-export const Dashboard = ({ user, onEditProfile }: Props) => {
+export const Dashboard = ({ user, streak, onEditProfile }: Props) => {
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [showAddForm, setShowAddForm] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -133,17 +134,27 @@ export const Dashboard = ({ user, onEditProfile }: Props) => {
   return (
     <div className="space-y-4">
       <section className="rounded-xl bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <h2 className="text-lg font-semibold text-slate-900">
             Hi{user.display_name ? `, ${user.display_name}` : ''} 👋
           </h2>
-          <button
-            type="button"
-            onClick={onEditProfile}
-            className="text-xs font-medium text-brand-700 hover:underline"
-          >
-            Edit profile
-          </button>
+          <div className="flex items-center gap-2">
+            {streak >= 2 ? (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700"
+                aria-label={`Streak ${streak} days`}
+              >
+                🔥 {streak}d
+              </span>
+            ) : null}
+            <button
+              type="button"
+              onClick={onEditProfile}
+              className="text-xs font-medium text-brand-700 hover:underline"
+            >
+              Edit profile
+            </button>
+          </div>
         </div>
         <p className="mt-1 text-sm text-slate-500">
           {state.kind === 'ready' ? `Today · ${state.date}` : 'Today'}

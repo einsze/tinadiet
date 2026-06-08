@@ -2,7 +2,19 @@ import { lineClient } from '../line/client.js';
 import { foodLogsRepository } from '../repositories/food_logs.js';
 import { userRepository } from '../repositories/users.js';
 import { todayInTimezone } from '../domain/date.js';
+import { computeStreakFromDates } from '../domain/streak.js';
 import type { FoodLogTotals, User } from '../domain/types.js';
+
+const STREAK_LOOKBACK_DAYS = 90;
+
+const computeStreakForUser = (userId: number, today: string): number => {
+  const dates = foodLogsRepository.distinctLogDatesRecent(
+    userId,
+    today,
+    STREAK_LOOKBACK_DAYS
+  );
+  return computeStreakFromDates(dates, today);
+};
 
 export type DailySummaryUserResult = {
   db_user_id: number;
@@ -27,7 +39,8 @@ export type DailySummaryResult = {
 
 export const formatDailySummary = (
   user: User,
-  totals: FoodLogTotals
+  totals: FoodLogTotals,
+  streak: number = 0
 ): string => {
   const goal = user.daily_calorie_goal;
   const consumed = totals.kcal;
@@ -74,6 +87,11 @@ export const formatDailySummary = (
     lines.push(`· Fat ${totals.fat_g}g / ${user.daily_fat_g}g`);
   }
 
+  if (streak >= 2) {
+    lines.push('');
+    lines.push(`🔥 บันทึกติดต่อกัน ${streak} วันแล้ว — สู้ๆ ค่ะ!`);
+  }
+
   return lines.join('\n');
 };
 
@@ -90,7 +108,8 @@ export const runDailySummary = async (
   for (const user of candidates) {
     const date = todayInTimezone(user.timezone);
     const totals = foodLogsRepository.totalsByUserAndDate(user.id, date);
-    const text = formatDailySummary(user, totals);
+    const streak = computeStreakForUser(user.id, date);
+    const text = formatDailySummary(user, totals, streak);
 
     if (dryRun) {
       results.push({

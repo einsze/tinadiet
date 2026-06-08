@@ -180,3 +180,71 @@ export const parseTextToFoodLog = async (
     );
   }
 };
+
+const VISION_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
+
+Vision-specific instructions:
+- The user is sending a photo of food they ate (or are about to eat).
+- Identify every distinct dish visible in the image and return one item per dish.
+- Estimate portion based on what is visible in the photo (plate size cues, common Thai serving sizes).
+- If the image is blurry / not food / unclear → is_food=false (or needs_clarification=true if it might be food but ambiguous).`;
+
+export const parseImageToFoodLog = async (
+  imageBase64: string,
+  mimeType: string,
+  caption?: string
+): Promise<FoodParserResponse> => {
+  const startedAt = Date.now();
+  try {
+    const userContent: Array<
+      | { type: 'text'; text: string }
+      | { type: 'image_url'; image_url: { url: string; detail?: 'low' | 'high' | 'auto' } }
+    > = [
+      {
+        type: 'image_url',
+        image_url: {
+          url: `data:${mimeType};base64,${imageBase64}`,
+          detail: 'low',
+        },
+      },
+    ];
+    if (caption !== undefined && caption.length > 0) {
+      userContent.unshift({ type: 'text', text: caption });
+    }
+
+    const completion = await openai().chat.completions.create({
+      model: env.OPENAI_VISION_MODEL,
+      messages: [
+        { role: 'system', content: VISION_SYSTEM_PROMPT },
+        { role: 'user', content: userContent },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: JSON_SCHEMA,
+      },
+      max_tokens: 600,
+      temperature: 0.2,
+    });
+
+    const choice = completion.choices[0];
+    if (!choice || !choice.message.content) {
+      throw new FoodParserError('OpenAI vision returned no content');
+    }
+
+    const result = JSON.parse(choice.message.content) as FoodParserResult;
+    const usage: FoodParserUsage = {
+      input_tokens: completion.usage?.prompt_tokens ?? 0,
+      output_tokens: completion.usage?.completion_tokens ?? 0,
+      model: completion.model,
+      latency_ms: Date.now() - startedAt,
+    };
+
+    return { result, usage };
+  } catch (err) {
+    if (err instanceof FoodParserError) throw err;
+    throw new FoodParserError(
+      err instanceof Error ? err.message : String(err),
+      err
+    );
+  }
+};
