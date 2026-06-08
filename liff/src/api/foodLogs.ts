@@ -25,6 +25,17 @@ export type FoodLogCreatePayload = {
 
 export type FoodLogCreateResponse = { log: FoodLog };
 
+export type FoodLogUpdatePayload = {
+  food_name_th: string | null;
+  food_name_en: string | null;
+  quantity_text?: string | null;
+  meal_type?: MealType | null;
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+};
+
 export const foodLogsApi = {
   listToday: () => api.get<FoodLogsListResponse>('/api/v1/food-logs'),
   listByDate: (date: string) =>
@@ -33,5 +44,7 @@ export const foodLogsApi = {
     ),
   create: (payload: FoodLogCreatePayload) =>
     api.post<FoodLogCreateResponse>('/api/v1/food-logs', payload),
+  update: (id: number, payload: FoodLogUpdatePayload) =>
+    api.patch<FoodLogCreateResponse>(`/api/v1/food-logs/${id}`, payload),
   delete: (id: number) => api.delete<void>(`/api/v1/food-logs/${id}`),
 };

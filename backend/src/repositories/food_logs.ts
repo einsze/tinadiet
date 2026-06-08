@@ -22,6 +22,7 @@ type Stmts = {
   insert: Statement;
   findById: Statement;
   deleteByIdAndUser: Statement;
+  updateByIdAndUser: Statement;
 };
 
 let _stmts: Stmts | null = null;
@@ -64,8 +65,32 @@ const stmts = (): Stmts => {
     deleteByIdAndUser: db.prepare(
       `DELETE FROM food_logs WHERE id = ? AND user_id = ?`
     ),
+    updateByIdAndUser: db.prepare(
+      `UPDATE food_logs SET
+         food_name_th  = @food_name_th,
+         food_name_en  = @food_name_en,
+         quantity_text = @quantity_text,
+         meal_type     = @meal_type,
+         kcal          = @kcal,
+         protein_g     = @protein_g,
+         carbs_g       = @carbs_g,
+         fat_g         = @fat_g,
+         updated_at    = datetime('now')
+       WHERE id = @id AND user_id = @user_id`
+    ),
   };
   return _stmts;
+};
+
+export type FoodLogUpdateInput = {
+  food_name_th: string | null;
+  food_name_en: string | null;
+  quantity_text: string | null;
+  meal_type: MealType | null;
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
 };
 
 export type FoodLogCreateInput = {
@@ -103,6 +128,28 @@ export const foodLogsRepository = {
   deleteByIdAndUser: (id: number, userId: number): boolean => {
     const info = stmts().deleteByIdAndUser.run(id, userId);
     return info.changes > 0;
+  },
+
+  updateByIdAndUser: (
+    id: number,
+    userId: number,
+    input: FoodLogUpdateInput
+  ): FoodLog | undefined => {
+    const s = stmts();
+    const info = s.updateByIdAndUser.run({
+      id,
+      user_id: userId,
+      food_name_th: input.food_name_th,
+      food_name_en: input.food_name_en,
+      quantity_text: input.quantity_text,
+      meal_type: input.meal_type,
+      kcal: input.kcal,
+      protein_g: input.protein_g,
+      carbs_g: input.carbs_g,
+      fat_g: input.fat_g,
+    });
+    if (info.changes === 0) return undefined;
+    return s.findById.get(id) as FoodLog;
   },
 
   create: (input: FoodLogCreateInput): FoodLog => {

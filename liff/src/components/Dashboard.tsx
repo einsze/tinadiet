@@ -76,6 +76,7 @@ export const Dashboard = ({ user, onEditProfile }: Props) => {
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [showAddForm, setShowAddForm] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [editingLogId, setEditingLogId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setState({ kind: 'loading' });
@@ -225,10 +226,25 @@ export const Dashboard = ({ user, onEditProfile }: Props) => {
           <ul className="mt-3 divide-y divide-slate-100">
             {state.logs.map((log) => {
               const isDeleting = deletingId === log.id;
+              const isEditing = editingLogId === log.id;
+              if (isEditing) {
+                return (
+                  <li key={log.id} className="py-3">
+                    <ManualLogForm
+                      initial={log}
+                      onCancel={() => setEditingLogId(null)}
+                      onSaved={() => {
+                        setEditingLogId(null);
+                        void load();
+                      }}
+                    />
+                  </li>
+                );
+              }
               return (
                 <li
                   key={log.id}
-                  className="flex items-start gap-2 py-3"
+                  className="flex items-start gap-1.5 py-3"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-slate-900">
@@ -249,6 +265,26 @@ export const Dashboard = ({ user, onEditProfile }: Props) => {
                       {Math.round(log.fat_g)}f
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingLogId(log.id)}
+                    aria-label={`Edit ${log.food_name_th ?? 'log'}`}
+                    className="shrink-0 rounded-full p-1.5 text-slate-400 transition hover:bg-brand-50 hover:text-brand-600"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M9.5 1.5 12.5 4.5 4.5 12.5 1.5 12.5 1.5 9.5z" />
+                      <line x1="8" y1="3" x2="11" y2="6" />
+                    </svg>
+                  </button>
                   <button
                     type="button"
                     onClick={() => void handleDelete(log)}

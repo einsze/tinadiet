@@ -22,6 +22,20 @@ const createSchema = z.object({
   raw_text: z.string().max(500).nullable().optional(),
 });
 
+const updateSchema = z.object({
+  food_name_th: z.string().min(1).max(200).nullable(),
+  food_name_en: z.string().min(1).max(200).nullable(),
+  quantity_text: z.string().min(1).max(100).nullable().optional(),
+  meal_type: z
+    .enum(['breakfast', 'lunch', 'dinner', 'snack'])
+    .nullable()
+    .optional(),
+  kcal: z.number().min(0).max(5000),
+  protein_g: z.number().min(0).max(500),
+  carbs_g: z.number().min(0).max(1000),
+  fat_g: z.number().min(0).max(500),
+});
+
 router.get('/', requireAuth, (req: Request, res: Response) => {
   const session = req.session;
   if (!session) {
@@ -123,6 +137,81 @@ router.post('/', requireAuth, (req: Request, res: Response) => {
     res
       .status(500)
       .json({ error: { code: 'INTERNAL', message: 'Failed to create food log' } });
+  }
+});
+
+router.patch('/:id', requireAuth, (req: Request, res: Response) => {
+  const session = req.session;
+  if (!session) {
+    res
+      .status(401)
+      .json({ error: { code: 'UNAUTHORIZED', message: 'No session' } });
+    return;
+  }
+
+  const idParam = Number(req.params.id);
+  if (!Number.isInteger(idParam) || idParam <= 0) {
+    res
+      .status(400)
+      .json({ error: { code: 'BAD_REQUEST', message: 'id must be a positive integer' } });
+    return;
+  }
+
+  const parsed = updateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid food log input',
+        details: parsed.error.issues.map((i) => ({
+          path: i.path.join('.'),
+          message: i.message,
+        })),
+      },
+    });
+    return;
+  }
+
+  try {
+    const log = foodLogsRepository.updateByIdAndUser(idParam, session.uid, {
+      food_name_th: parsed.data.food_name_th,
+      food_name_en: parsed.data.food_name_en,
+      quantity_text: parsed.data.quantity_text ?? null,
+      meal_type: parsed.data.meal_type ?? null,
+      kcal: parsed.data.kcal,
+      protein_g: parsed.data.protein_g,
+      carbs_g: parsed.data.carbs_g,
+      fat_g: parsed.data.fat_g,
+    });
+    if (log === undefined) {
+      res
+        .status(404)
+        .json({ error: { code: 'NOT_FOUND', message: 'Food log not found' } });
+      return;
+    }
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'food_logs.update.success',
+        db_user_id: session.uid,
+        log_id: idParam,
+      })
+    );
+    res.status(200).json({ log });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        msg: 'food_logs.update.failed',
+        db_user_id: session.uid,
+        log_id: idParam,
+        error: msg,
+      })
+    );
+    res
+      .status(500)
+      .json({ error: { code: 'INTERNAL', message: 'Failed to update food log' } });
   }
 });
 

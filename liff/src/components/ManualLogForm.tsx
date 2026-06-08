@@ -16,18 +16,29 @@ const parseNumber = (raw: string): number | undefined => {
   return Number.isFinite(n) ? n : undefined;
 };
 
+const initialName = (log: FoodLog): string =>
+  log.food_name_th ?? log.food_name_en ?? log.raw_text ?? '';
+
 type Props = {
   onSaved: (log: FoodLog) => void;
   onCancel: () => void;
+  initial?: FoodLog;
 };
 
-export const ManualLogForm = ({ onSaved, onCancel }: Props) => {
-  const [name, setName] = useState('');
-  const [kcal, setKcal] = useState<number | undefined>(undefined);
-  const [protein, setProtein] = useState<number | undefined>(undefined);
-  const [carbs, setCarbs] = useState<number | undefined>(undefined);
-  const [fat, setFat] = useState<number | undefined>(undefined);
-  const [mealType, setMealType] = useState<MealType | ''>('');
+export const ManualLogForm = ({ onSaved, onCancel, initial }: Props) => {
+  const isEdit = initial !== undefined;
+  const [name, setName] = useState<string>(
+    initial !== undefined ? initialName(initial) : ''
+  );
+  const [kcal, setKcal] = useState<number | undefined>(initial?.kcal);
+  const [protein, setProtein] = useState<number | undefined>(
+    initial?.protein_g
+  );
+  const [carbs, setCarbs] = useState<number | undefined>(initial?.carbs_g);
+  const [fat, setFat] = useState<number | undefined>(initial?.fat_g);
+  const [mealType, setMealType] = useState<MealType | ''>(
+    initial?.meal_type ?? ''
+  );
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -41,16 +52,24 @@ export const ManualLogForm = ({ onSaved, onCancel }: Props) => {
     setErrorMessage(null);
     try {
       const trimmed = name.trim();
-      const res = await foodLogsApi.create({
+      const payload = {
         food_name_th: trimmed,
-        food_name_en: null,
+        food_name_en: initial?.food_name_en ?? null,
         kcal: kcal ?? 0,
         protein_g: protein ?? 0,
         carbs_g: carbs ?? 0,
         fat_g: fat ?? 0,
         meal_type: mealType === '' ? null : mealType,
-        raw_text: trimmed,
-      });
+      };
+      let res;
+      if (isEdit && initial !== undefined) {
+        res = await foodLogsApi.update(initial.id, payload);
+      } else {
+        res = await foodLogsApi.create({
+          ...payload,
+          raw_text: trimmed,
+        });
+      }
       onSaved(res.log);
     } catch (err) {
       const message =
@@ -68,6 +87,12 @@ export const ManualLogForm = ({ onSaved, onCancel }: Props) => {
       onSubmit={handleSubmit}
       className="mt-3 space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4"
     >
+      {isEdit ? (
+        <div className="text-xs font-medium uppercase tracking-wide text-brand-700">
+          Edit log
+        </div>
+      ) : null}
+
       <label className="block space-y-1">
         <span className="text-xs font-medium text-slate-700">Food name *</span>
         <input
@@ -177,7 +202,7 @@ export const ManualLogForm = ({ onSaved, onCancel }: Props) => {
           disabled={!isValid || submitting}
           className="flex-1 rounded-md bg-brand-500 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
-          {submitting ? 'Saving…' : 'Save log'}
+          {submitting ? 'Saving…' : isEdit ? 'Save changes' : 'Save log'}
         </button>
       </div>
     </form>
