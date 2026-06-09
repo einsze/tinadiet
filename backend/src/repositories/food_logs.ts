@@ -11,7 +11,7 @@ import { todayInTimezone } from '../domain/date.js';
 const FOOD_LOG_COLUMNS = `
   id, user_id, logged_at, date, meal_type,
   food_name_th, food_name_en, quantity_text,
-  kcal, protein_g, carbs_g, fat_g,
+  kcal, kcal_low, kcal_high, protein_g, carbs_g, fat_g,
   source, raw_text, confidence,
   created_at, updated_at
 `;
@@ -53,12 +53,12 @@ const stmts = (): Stmts => {
       `INSERT INTO food_logs (
          user_id, date, meal_type,
          food_name_th, food_name_en, quantity_text,
-         kcal, protein_g, carbs_g, fat_g,
+         kcal, kcal_low, kcal_high, protein_g, carbs_g, fat_g,
          source, raw_text, confidence
        ) VALUES (
          @user_id, @date, @meal_type,
          @food_name_th, @food_name_en, @quantity_text,
-         @kcal, @protein_g, @carbs_g, @fat_g,
+         @kcal, @kcal_low, @kcal_high, @protein_g, @carbs_g, @fat_g,
          @source, @raw_text, @confidence
        )`
     ),
@@ -75,6 +75,8 @@ const stmts = (): Stmts => {
          quantity_text = @quantity_text,
          meal_type     = @meal_type,
          kcal          = @kcal,
+         kcal_low      = @kcal_low,
+         kcal_high     = @kcal_high,
          protein_g     = @protein_g,
          carbs_g       = @carbs_g,
          fat_g         = @fat_g,
@@ -123,6 +125,8 @@ export type FoodLogUpdateInput = {
   quantity_text: string | null;
   meal_type: MealType | null;
   kcal: number;
+  kcal_low: number;
+  kcal_high: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;
@@ -136,6 +140,8 @@ export type FoodLogCreateInput = {
   food_name_en: string | null;
   quantity_text: string | null;
   kcal: number;
+  kcal_low: number;
+  kcal_high: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;
@@ -219,6 +225,8 @@ export const foodLogsRepository = {
       quantity_text: input.quantity_text,
       meal_type: input.meal_type,
       kcal: input.kcal,
+      kcal_low: input.kcal_low,
+      kcal_high: input.kcal_high,
       protein_g: input.protein_g,
       carbs_g: input.carbs_g,
       fat_g: input.fat_g,
@@ -238,6 +246,8 @@ export const foodLogsRepository = {
       food_name_en: input.food_name_en,
       quantity_text: input.quantity_text,
       kcal: input.kcal,
+      kcal_low: input.kcal_low,
+      kcal_high: input.kcal_high,
       protein_g: input.protein_g,
       carbs_g: input.carbs_g,
       fat_g: input.fat_g,

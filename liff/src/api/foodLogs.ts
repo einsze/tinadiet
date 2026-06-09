@@ -17,6 +17,8 @@ export type FoodLogCreatePayload = {
   quantity_text?: string | null;
   meal_type?: MealType | null;
   kcal: number;
+  kcal_low?: number;
+  kcal_high?: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;
@@ -31,6 +33,8 @@ export type FoodLogUpdatePayload = {
   quantity_text?: string | null;
   meal_type?: MealType | null;
   kcal: number;
+  kcal_low?: number;
+  kcal_high?: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;

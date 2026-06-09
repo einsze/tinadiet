@@ -62,6 +62,8 @@ export type FoodLog = {
   food_name_en: string | null;
   quantity_text: string | null;
   kcal: number;
+  kcal_low: number;
+  kcal_high: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;

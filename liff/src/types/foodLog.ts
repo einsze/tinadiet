@@ -11,6 +11,8 @@ export type FoodLog = {
   food_name_en: string | null;
   quantity_text: string | null;
   kcal: number;
+  kcal_low: number;
+  kcal_high: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;
@@ -19,6 +21,17 @@ export type FoodLog = {
   confidence: number | null;
   created_at: string;
   updated_at: string;
+};
+
+export const formatKcalRange = (
+  kcalLow: number,
+  kcalHigh: number,
+  kcalMid: number
+): string => {
+  const lo = Math.round(kcalLow);
+  const hi = Math.round(kcalHigh);
+  if (lo === hi) return `${Math.round(kcalMid)}`;
+  return `${lo}-${hi}`;
 };
 
 export type FoodLogTotals = {

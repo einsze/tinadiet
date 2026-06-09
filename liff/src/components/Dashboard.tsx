@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { foodLogsApi } from '../api/foodLogs.js';
-import type { FoodLog, FoodLogTotals } from '../types/foodLog.js';
+import {
+  formatKcalRange,
+  type FoodLog,
+  type FoodLogTotals,
+} from '../types/foodLog.js';
 import type { User } from '../types/user.js';
 import { KcalRing } from './KcalRing.js';
 import { ManualLogForm } from './ManualLogForm.js';
@@ -268,11 +272,11 @@ export const Dashboard = ({ user, streak, onEditProfile }: Props) => {
                     </div>
                   </div>
                   <div className="text-right text-sm shrink-0">
-                    <div className="font-semibold text-slate-900">
-                      {Math.round(log.kcal)}
+                    <div className="font-semibold text-slate-900 tabular-nums">
+                      {formatKcalRange(log.kcal_low, log.kcal_high, log.kcal)}
                       <span className="ml-0.5 text-xs font-normal text-slate-500">kcal</span>
                     </div>
-                    <div className="text-xs text-slate-400">
+                    <div className="text-xs text-slate-400 tabular-nums">
                       {Math.round(log.protein_g)}p · {Math.round(log.carbs_g)}c ·{' '}
                       {Math.round(log.fat_g)}f
                     </div>

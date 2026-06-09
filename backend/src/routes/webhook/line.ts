@@ -107,7 +107,8 @@ const formatLogsList = (
   const lines = logs.map((log, i) => {
     const name =
       log.food_name_th ?? log.food_name_en ?? log.raw_text ?? 'อาหาร';
-    return `${i + 1}. ${name} · ${Math.round(log.kcal)} kcal · ${Math.round(log.protein_g)}p/${Math.round(log.carbs_g)}c/${Math.round(log.fat_g)}f`;
+    const kcalStr = formatKcalRange(log.kcal_low, log.kcal_high, log.kcal);
+    return `${i + 1}. ${name} · ${kcalStr} · ${Math.round(log.protein_g)}p/${Math.round(log.carbs_g)}c/${Math.round(log.fat_g)}f`;
   });
   const goal = user.daily_calorie_goal;
   const summary =
@@ -121,9 +122,18 @@ type SavedItem = {
   food_name_th: string | null;
   food_name_en: string | null;
   kcal: number;
+  kcal_low: number;
+  kcal_high: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+};
+
+const formatKcalRange = (low: number, high: number, mid: number): string => {
+  const lo = Math.round(low);
+  const hi = Math.round(high);
+  if (lo === hi) return `${Math.round(mid)} kcal`;
+  return `${lo}-${hi} kcal`;
 };
 
 const formatTodayLine = (user: User): string => {
@@ -140,14 +150,16 @@ const formatSingleConfirmation = (user: User, item: SavedItem): string => {
     item.food_name_th && item.food_name_en
       ? `${item.food_name_th} (${item.food_name_en})`
       : (item.food_name_th ?? item.food_name_en ?? 'อาหาร');
-  const macros = `${Math.round(item.kcal)} kcal · ${Math.round(item.protein_g)}p · ${Math.round(item.carbs_g)}c · ${Math.round(item.fat_g)}f`;
+  const kcalStr = formatKcalRange(item.kcal_low, item.kcal_high, item.kcal);
+  const macros = `${kcalStr} · ${Math.round(item.protein_g)}p · ${Math.round(item.carbs_g)}c · ${Math.round(item.fat_g)}f`;
   return `✅ ${nameLine}\n${macros}\n${formatTodayLine(user)}`;
 };
 
 const formatMultiConfirmation = (user: User, items: SavedItem[]): string => {
   const lines = items.map((item, i) => {
     const name = item.food_name_th ?? item.food_name_en ?? 'อาหาร';
-    return `${i + 1}. ${name} · ${Math.round(item.kcal)} kcal`;
+    const kcalStr = formatKcalRange(item.kcal_low, item.kcal_high, item.kcal);
+    return `${i + 1}. ${name} · ${kcalStr}`;
   });
   const sessionKcal = items.reduce((sum, item) => sum + item.kcal, 0);
   return `✅ บันทึก ${items.length} รายการ\n${lines.join('\n')}\nรวมครั้งนี้: ${Math.round(sessionKcal)} kcal\n${formatTodayLine(user)}`;
@@ -191,6 +203,8 @@ const replyToParsedResult = async (
   }
 
   const savedItems: SavedItem[] = result.items.map((item) => {
+    const lo = Math.min(item.kcal_low, item.kcal);
+    const hi = Math.max(item.kcal_high, item.kcal);
     const log = foodLogsRepository.create({
       user_id: user.id,
       user_timezone: user.timezone,
@@ -199,6 +213,8 @@ const replyToParsedResult = async (
       food_name_en: item.food_name_en,
       quantity_text: item.quantity_text,
       kcal: item.kcal,
+      kcal_low: lo,
+      kcal_high: hi,
       protein_g: item.protein_g,
       carbs_g: item.carbs_g,
       fat_g: item.fat_g,
@@ -213,6 +229,8 @@ const replyToParsedResult = async (
         db_user_id: user.id,
         log_id: log.id,
         kcal: log.kcal,
+        kcal_low: log.kcal_low,
+        kcal_high: log.kcal_high,
         source,
       })
     );
@@ -220,6 +238,8 @@ const replyToParsedResult = async (
       food_name_th: log.food_name_th,
       food_name_en: log.food_name_en,
       kcal: log.kcal,
+      kcal_low: log.kcal_low,
+      kcal_high: log.kcal_high,
       protein_g: log.protein_g,
       carbs_g: log.carbs_g,
       fat_g: log.fat_g,

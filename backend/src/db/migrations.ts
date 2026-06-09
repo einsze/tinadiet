@@ -76,4 +76,12 @@ export const migrations: ReadonlyArray<Migration> = [
       CREATE INDEX idx_weight_logs_user_logged ON weight_logs(user_id, logged_at);
     `,
   },
+  {
+    name: '0004_food_logs_kcal_range',
+    sql: `
+      ALTER TABLE food_logs ADD COLUMN kcal_low  REAL;
+      ALTER TABLE food_logs ADD COLUMN kcal_high REAL;
+      UPDATE food_logs SET kcal_low = kcal, kcal_high = kcal WHERE kcal_low IS NULL;
+    `,
+  },
 ];

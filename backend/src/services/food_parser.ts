@@ -8,6 +8,8 @@ export type FoodParserItem = {
   quantity_text: string | null;
   meal_type: MealType | null;
   kcal: number;
+  kcal_low: number;
+  kcal_high: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;
@@ -66,9 +68,18 @@ Per-item rules:
 - quantity_text = the exact quantity phrase if user gave one ("2 จาน",
   "100g", "1 bowl"), else null. Default = one standard Thai serving.
 - meal_type = infer from cues in the message if any, else null.
-- kcal, protein_g, carbs_g, fat_g = realistic values for the consumed
-  quantity (scale by quantity_text). Be conservative; never guess wildly.
-- confidence = 0.0 to 1.0.
+- kcal = best mid-point estimate for the portion you assume.
+- kcal_low and kcal_high = realistic range bounds reflecting portion
+  uncertainty. Rules of thumb:
+  * tight range (kcal_high - kcal_low ≤ kcal * 0.15) when the user gave
+    explicit quantity ("100g", "1 piece") or the dish is very standardized
+    ("1 banana").
+  * wider range (≤ kcal * 0.40) for ambiguous Thai dish photos where
+    portion is hard to judge (one plate could be small or generous).
+  * Always satisfy: kcal_low ≤ kcal ≤ kcal_high. Never invert.
+- protein_g, carbs_g, fat_g = single point estimate at the same mid kcal.
+  Do not range these — macros stay stable per gram of food.
+- confidence = 0.0 to 1.0 reflecting your overall certainty.
 
 Language rules:
 - food_name_th, reason, clarification_question MUST be in Thai.
@@ -88,6 +99,8 @@ const ITEM_SCHEMA = {
       enum: ['breakfast', 'lunch', 'dinner', 'snack', null],
     },
     kcal: { type: 'number' },
+    kcal_low: { type: 'number' },
+    kcal_high: { type: 'number' },
     protein_g: { type: 'number' },
     carbs_g: { type: 'number' },
     fat_g: { type: 'number' },
@@ -99,6 +112,8 @@ const ITEM_SCHEMA = {
     'quantity_text',
     'meal_type',
     'kcal',
+    'kcal_low',
+    'kcal_high',
     'protein_g',
     'carbs_g',
     'fat_g',
