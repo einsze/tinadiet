@@ -33,6 +33,7 @@ import {
   ConsultationError,
 } from '../../services/consultation.js';
 import { todayInTimezone } from '../../domain/date.js';
+import { isProfileComplete } from '../../domain/profile.js';
 import type { FoodLog, FoodLogTotals, User } from '../../domain/types.js';
 
 const router = Router();
@@ -51,6 +52,9 @@ const GREETING_RE =
   /^(hi|hello|halo|hey|yo|hai|ok|okay|thanks|thank you|ขอบคุณ|สวัสดี|ครับ|ค่ะ|haha|lol|tina)(\s+tina)?$/i;
 const HINT_TEXT =
   'สวัสดีค่ะ ฉัน Tina 🌱\nบอกฉันได้เลยว่าวันนี้ทานอะไร ฉันจะคำนวณแคลให้\nตัวอย่าง: "ผัดกะเพราไก่ไข่ดาว" หรือ "1 plate of pad thai"\n\nพิมพ์ "วันนี้" เพื่อดูบันทึกของวันนี้';
+
+const profileGateText = (): string =>
+  `สวัสดีค่ะ ฉัน Tina 🌱\n\nก่อนเริ่มคำนวณแคลอรี่และให้คำแนะนำส่วนตัว Tina ต้องรู้ข้อมูลพื้นฐานของคุณก่อนนะคะ — เพศ ส่วนสูง น้ำหนัก เป้าหมาย และ activity level\n\nแตะลิงก์นี้เพื่อตั้งค่าโปรไฟล์ (ใช้เวลาประมาณ 1 นาที):\n${env.LIFF_URL}\n\nหลังตั้งค่าเสร็จ ส่งข้อความหรือรูปอาหารมาได้เลยค่ะ ☺️`;
 
 const WEIGHT_LOG_RE =
   /^\s*(?:น้ำหนัก|ชั่ง(?:น้ำหนัก)?|weight|wt)\s*[:=]?\s*(\d{2,3}(?:\.\d{1,2})?)\s*(?:kg|กก|กิโล)?\s*$/i;
@@ -442,6 +446,22 @@ const handleTextEvent = async (
     })
   );
 
+  if (!isProfileComplete(user)) {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.profile_gate',
+        db_user_id: user.id,
+        source: 'text',
+      })
+    );
+    await lineClient.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{ type: 'text', text: profileGateText() }],
+    });
+    return;
+  }
+
   const intent = classifyIntent(text);
 
   if (intent.kind === 'log_weight') {
@@ -584,6 +604,23 @@ const handleImageEvent = async (
   if (!lineUserId) return;
 
   const user = userRepository.upsertFromLine({ line_user_id: lineUserId });
+
+  if (!isProfileComplete(user)) {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.profile_gate',
+        db_user_id: user.id,
+        source: 'image',
+      })
+    );
+    await lineClient.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{ type: 'text', text: profileGateText() }],
+    });
+    return;
+  }
+
   const today = todayInTimezone(user.timezone);
   const count = foodLogsRepository.countPhotoLogsToday(user.id, today);
 
