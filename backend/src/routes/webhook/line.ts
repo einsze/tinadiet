@@ -10,12 +10,12 @@ import {
   lineClient,
   lineSignatureConfig,
   fetchMessageContentAsBase64,
+  showLoadingAnimation,
 } from '../../line/client.js';
 import { env } from '../../config/env.js';
 import { userRepository } from '../../repositories/users.js';
 import { foodLogsRepository } from '../../repositories/food_logs.js';
 import { weightLogsRepository } from '../../repositories/weight_logs.js';
-import { chatMessagesRepository } from '../../repositories/chat_messages.js';
 import {
   parseTextToFoodLog,
   parseImageToFoodLog,
@@ -353,6 +353,7 @@ const handleConsultation = async (
   replyToken: string,
   fallbackFromParser: boolean
 ): Promise<void> => {
+  void showLoadingAnimation(user.line_user_id, 20);
   try {
     const outcome = await runConsultation({ user, question: text });
 
@@ -534,6 +535,8 @@ const handleTextEvent = async (
     return;
   }
 
+  void showLoadingAnimation(lineUserId, 20);
+
   try {
     const { result, usage } = await parseTextToFoodLog(text);
     console.log(
@@ -605,6 +608,8 @@ const handleImageEvent = async (
     });
     return;
   }
+
+  void showLoadingAnimation(lineUserId, 30);
 
   try {
     const { base64, mimeType } = await fetchMessageContentAsBase64(

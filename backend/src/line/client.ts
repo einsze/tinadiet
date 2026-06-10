@@ -25,3 +25,24 @@ export const fetchMessageContentAsBase64 = async (
   const buf = Buffer.concat(chunks);
   return { base64: buf.toString('base64'), mimeType };
 };
+
+export const showLoadingAnimation = async (
+  lineUserId: string,
+  loadingSeconds: number = 20
+): Promise<void> => {
+  try {
+    await lineClient.showLoadingAnimation({
+      chatId: lineUserId,
+      loadingSeconds,
+    });
+  } catch (err) {
+    console.warn(
+      JSON.stringify({
+        level: 'warn',
+        msg: 'line.loading_animation.failed',
+        line_user_id: lineUserId,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    );
+  }
+};
