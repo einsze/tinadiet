@@ -84,4 +84,20 @@ export const migrations: ReadonlyArray<Migration> = [
       UPDATE food_logs SET kcal_low = kcal, kcal_high = kcal WHERE kcal_low IS NULL;
     `,
   },
+  {
+    name: '0005_chat_messages',
+    sql: `
+      CREATE TABLE chat_messages (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role        TEXT NOT NULL CHECK(role IN ('user','assistant')),
+        content     TEXT NOT NULL,
+        date        TEXT NOT NULL,
+        refused     INTEGER NOT NULL DEFAULT 0,
+        created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX idx_chat_messages_user_created ON chat_messages(user_id, created_at DESC);
+      CREATE INDEX idx_chat_messages_user_date    ON chat_messages(user_id, date);
+    `,
+  },
 ];

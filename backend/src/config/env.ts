@@ -29,6 +29,11 @@ export const env = {
   OPENAI_VISION_MODEL: process.env.OPENAI_VISION_MODEL ?? 'gpt-4o',
   OPENAI_TIMEOUT_MS: Number(process.env.OPENAI_TIMEOUT_MS ?? 10000),
   PHOTO_DAILY_LIMIT: Number(process.env.PHOTO_DAILY_LIMIT ?? 10),
+  CONSULT_DAILY_LIMIT: Number(process.env.CONSULT_DAILY_LIMIT ?? 20),
+  CONSULT_HISTORY_MINUTES: Number(process.env.CONSULT_HISTORY_MINUTES ?? 120),
+  CONSULT_HISTORY_MAX_MESSAGES: Number(
+    process.env.CONSULT_HISTORY_MAX_MESSAGES ?? 10
+  ),
 
   CRON_ENABLED: (process.env.CRON_ENABLED ?? 'true').toLowerCase() === 'true',
   CRON_TZ: process.env.CRON_TZ ?? 'Asia/Bangkok',

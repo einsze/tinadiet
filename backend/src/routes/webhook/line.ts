@@ -15,6 +15,7 @@ import { env } from '../../config/env.js';
 import { userRepository } from '../../repositories/users.js';
 import { foodLogsRepository } from '../../repositories/food_logs.js';
 import { weightLogsRepository } from '../../repositories/weight_logs.js';
+import { chatMessagesRepository } from '../../repositories/chat_messages.js';
 import {
   parseTextToFoodLog,
   parseImageToFoodLog,
@@ -27,7 +28,12 @@ import {
   currentHourInTimezone,
   CoachError,
 } from '../../services/coach.js';
+import {
+  generateConsultationAnswer,
+  ConsultationError,
+} from '../../services/consultation.js';
 import { todayInTimezone } from '../../domain/date.js';
+import { computeStreakFromDates } from '../../domain/streak.js';
 import type { FoodLog, FoodLogTotals, User } from '../../domain/types.js';
 
 const router = Router();
@@ -75,11 +81,27 @@ const isShowLogsRequest = (text: string): boolean => {
     /^list$/i.test(t) ||
     /^what (did|have) i (eat|eaten|ate)/i.test(t) ||
     /^show (logs?|today|me)/i.test(t) ||
-    /^วันนี้/.test(t) ||
-    /^สรุป/.test(t) ||
-    /^รายการ/.test(t) ||
-    /^กินอะไร/.test(t)
+    /^วันนี้$/.test(t) ||
+    /^วันนี้กินอะไรไป/.test(t) ||
+    /^สรุป$/.test(t) ||
+    /^รายการ$/.test(t)
   );
+};
+
+const QUESTION_MARK_RE = /[?？]/;
+const QUESTION_PREFIX_RE =
+  /^(ทำไม|อะไร|ไหน|เมื่อไหร่|เมื่อไร|อย่างไร|ยังไง|เท่าไหร่|เท่าไร|ใคร|ขอ|ช่วย|แนะนำ|บอก|สอน|อยาก|สงสัย|ควร|แทน|น้ำหนัก|ลด|เพิ่ม|ลดน้ำหนัก|เพิ่มน้ำหนัก|กินอะไร|why|what|how|when|where|who|can i|should i|is it|are\b|do i|am i|can you|recommend|suggest|help me|i want to know)\b/i;
+const QUESTION_PARTICLE_RE = /(ไหม|มั้ย|รึเปล่า|หรือเปล่า|หรือไม่)\??$/;
+const QUESTION_INLINE_PARTICLE_RE = /(ไหม|มั้ย|รึเปล่า|หรือเปล่า)/;
+
+const isLikelyQuestion = (text: string): boolean => {
+  const t = text.trim();
+  if (t.length < 4) return false;
+  if (QUESTION_MARK_RE.test(t)) return true;
+  if (QUESTION_PREFIX_RE.test(t)) return true;
+  if (QUESTION_PARTICLE_RE.test(t)) return true;
+  if (QUESTION_INLINE_PARTICLE_RE.test(t) && t.length > 8) return true;
+  return false;
 };
 
 type IntentDecision =
@@ -88,6 +110,7 @@ type IntentDecision =
   | { kind: 'skip_empty' }
   | { kind: 'show_logs' }
   | { kind: 'log_weight'; weight_kg: number }
+  | { kind: 'consult_question' }
   | { kind: 'attempt_parse' };
 
 const classifyIntent = (text: string): IntentDecision => {
@@ -99,6 +122,7 @@ const classifyIntent = (text: string): IntentDecision => {
   if (trimmed.startsWith('/')) return { kind: 'skip_command' };
   if (trimmed.length < 3) return { kind: 'skip_greeting' };
   if (GREETING_RE.test(trimmed)) return { kind: 'skip_greeting' };
+  if (isLikelyQuestion(trimmed)) return { kind: 'consult_question' };
   return { kind: 'attempt_parse' };
 };
 
@@ -179,6 +203,21 @@ const replyToParsedResult = async (
   source: 'chat_ai' | 'photo'
 ): Promise<void> => {
   if (!result.is_food) {
+    if (
+      source === 'chat_ai' &&
+      rawText !== null &&
+      rawText.trim().length >= 10
+    ) {
+      console.log(
+        JSON.stringify({
+          level: 'info',
+          msg: 'webhook.consultation.fallback_from_not_food',
+          db_user_id: user.id,
+        })
+      );
+      await handleConsultation(user, rawText, replyToken, true);
+      return;
+    }
     const reason = result.reason ?? '';
     const replyText =
       reason.length > 0 ? `${reason}\n\n${HINT_TEXT}` : HINT_TEXT;
@@ -309,6 +348,127 @@ const replyToParsedResult = async (
   });
 };
 
+const handleConsultation = async (
+  user: User,
+  text: string,
+  replyToken: string,
+  fallbackFromParser: boolean
+): Promise<void> => {
+  const today = todayInTimezone(user.timezone);
+  const questionsToday = chatMessagesRepository.countQuestionsToday(
+    user.id,
+    today
+  );
+
+  if (questionsToday >= env.CONSULT_DAILY_LIMIT) {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.consultation.quota_exceeded',
+        db_user_id: user.id,
+        count: questionsToday,
+        limit: env.CONSULT_DAILY_LIMIT,
+      })
+    );
+    await lineClient.replyMessage({
+      replyToken,
+      messages: [
+        {
+          type: 'text',
+          text: `วันนี้ถามครบ ${env.CONSULT_DAILY_LIMIT} คำถามแล้วค่ะ\nพรุ่งนี้ Tina ยินดีตอบใหม่นะคะ 🌱`,
+        },
+      ],
+    });
+    return;
+  }
+
+  chatMessagesRepository.append({
+    user_id: user.id,
+    user_timezone: user.timezone,
+    role: 'user',
+    content: text,
+    refused: false,
+  });
+
+  const totals = foodLogsRepository.totalsByUserAndDate(user.id, today);
+  const todayLogs = foodLogsRepository.listByUserAndDate(user.id, today);
+  const recentWeights = weightLogsRepository.listRecent(user.id, 14);
+  const recentDates = foodLogsRepository.distinctLogDatesRecent(
+    user.id,
+    today,
+    30
+  );
+  const streak = computeStreakFromDates(recentDates, today);
+  const windowMessages = chatMessagesRepository.listRecentWindow(
+    user.id,
+    env.CONSULT_HISTORY_MINUTES,
+    env.CONSULT_HISTORY_MAX_MESSAGES
+  );
+  const history = windowMessages.slice(0, -1);
+
+  try {
+    const { result, usage } = await generateConsultationAnswer({
+      user,
+      question: text,
+      today_totals: totals,
+      today_logs: todayLogs,
+      recent_weight_logs: recentWeights,
+      streak_days: streak,
+      history,
+    });
+
+    chatMessagesRepository.append({
+      user_id: user.id,
+      user_timezone: user.timezone,
+      role: 'assistant',
+      content: result.answer_th,
+      refused: result.refused,
+    });
+
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.consultation.ok',
+        db_user_id: user.id,
+        model: usage.model,
+        input_tokens: usage.input_tokens,
+        output_tokens: usage.output_tokens,
+        latency_ms: usage.latency_ms,
+        topic: result.topic,
+        refused: result.refused,
+        fallback_from_parser: fallbackFromParser,
+        questions_today: questionsToday + 1,
+      })
+    );
+
+    await lineClient.replyMessage({
+      replyToken,
+      messages: [{ type: 'text', text: result.answer_th }],
+    });
+  } catch (err) {
+    const isConsultErr = err instanceof ConsultationError;
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        msg: 'webhook.consultation.failed',
+        db_user_id: user.id,
+        is_consultation_error: isConsultErr,
+        fallback_from_parser: fallbackFromParser,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    );
+    await lineClient.replyMessage({
+      replyToken,
+      messages: [
+        {
+          type: 'text',
+          text: 'ขออภัยค่ะ ตอบไม่ได้ตอนนี้ ลองอีกครั้งสักครู่นะคะ',
+        },
+      ],
+    });
+  }
+};
+
 const handleTextEvent = async (
   event: MessageEvent & { message: TextEventMessage }
 ): Promise<void> => {
@@ -390,6 +550,18 @@ const handleTextEvent = async (
       replyToken: event.replyToken,
       messages: [{ type: 'text', text: replyText }],
     });
+    return;
+  }
+
+  if (intent.kind === 'consult_question') {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.intent.consult_question',
+        db_user_id: user.id,
+      })
+    );
+    await handleConsultation(user, text, event.replyToken, false);
     return;
   }
 
