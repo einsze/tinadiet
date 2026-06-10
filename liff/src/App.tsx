@@ -3,6 +3,7 @@ import { useSession, type LiffDebug } from './state/session.js';
 import { isProfileComplete } from './types/user.js';
 import { ProfileForm } from './components/ProfileForm.js';
 import { Dashboard } from './components/Dashboard.js';
+import { OnboardingSplash } from './components/OnboardingSplash.js';
 
 const StatusBadge = ({
   label,
@@ -71,6 +72,7 @@ const Shell = ({ children }: { children: React.ReactNode }) => (
 const App = () => {
   const { status, triggerLogin, setUser } = useSession();
   const [forceEdit, setForceEdit] = useState(false);
+  const [splashDismissed, setSplashDismissed] = useState(false);
 
   if (status.kind === 'idle' || status.kind === 'initializing') {
     return (
@@ -144,6 +146,18 @@ const App = () => {
   const { user, streak, debug } = status;
   const completed = isProfileComplete(user);
 
+  if (!completed && !forceEdit && !splashDismissed) {
+    return (
+      <Shell>
+        <OnboardingSplash
+          displayName={user.display_name}
+          onContinue={() => setSplashDismissed(true)}
+        />
+        <DebugBox debug={debug} />
+      </Shell>
+    );
+  }
+
   if (!completed || forceEdit) {
     return (
       <Shell>
@@ -152,6 +166,7 @@ const App = () => {
           onSaved={(updated) => {
             setUser(updated);
             setForceEdit(false);
+            setSplashDismissed(false);
           }}
         />
         <DebugBox debug={debug} />
