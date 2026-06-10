@@ -202,7 +202,31 @@ Vision-specific instructions:
 - The user is sending a photo of food they ate (or are about to eat).
 - Identify every distinct dish visible in the image and return one item per dish.
 - Estimate portion based on what is visible in the photo (plate size cues, common Thai serving sizes).
-- If the image is blurry / not food / unclear → is_food=false (or needs_clarification=true if it might be food but ambiguous).`;
+- If the image is blurry / not food / unclear → is_food=false (or needs_clarification=true if it might be food but ambiguous).
+
+Visual disambiguation for commonly confused Thai dishes — use these cues BEFORE naming the dish:
+
+PORK-ON-RICE family (very commonly confused):
+- ข้าวขาหมู (Khao Kha Moo / pork leg rice): BRAISED pork leg/hock, DARK GLOSSY BROWN gravy, SOFT fall-apart meat (no crispy skin), typically served with Chinese greens (cai lan/kale/morning glory) and sometimes boiled egg + pickled mustard greens. NO red color on meat.
+- ข้าวหมูแดง (Khao Moo Daeng / red BBQ pork rice): roast pork SLICES with distinctly RED edges/glaze (from red fermented bean paste), drizzled with thin sweet-savory red-brown sauce, almost always served with cucumber + boiled egg. KEY signal: visible RED color on the pork edges or surface.
+- ข้าวหมูกรอบ (Khao Moo Krob / crispy pork rice): cubed pork belly with CRISPY golden skin clearly separated from the white meat layer below; dark sweet dipping sauce on side.
+- ข้าวขาหมู vs ข้าวหมูแดง decision rule: if pork is sliced and shows RED edges → moo daeng. If pork is chunky/whole leg and brown gravy → kha moo.
+
+CHICKEN-ON-RICE family:
+- ข้าวมันไก่ (Khao Man Gai): POACHED white/pale chicken (not roasted, not fried), yellowish oil-cooked rice, ginger + chili dipping sauce on side.
+- ข้าวหน้าไก่: stewed chicken pieces in brown gravy over rice (different from poached khao man gai).
+- ไก่ทอด vs ไก่ย่าง: fried (uniformly golden crispy crust, often battered) vs grilled (visible char lines, no batter).
+
+OTHER common confusions:
+- ผัดกะเพรา: visible WHOLE basil leaves stir-fried in, dark brown sauce, typically over rice with fried egg.
+- ผัดไทย: orange-tinted thin rice noodles with bean sprouts, lime wedge, crushed peanuts, often shrimp/egg/tofu.
+- ก๋วยเตี๋ยวเรือ vs ก๋วยเตี๋ยวต้มยำ: boat noodle has DARK MURKY broth; tom yum noodle has RED-ORANGE broth with chili oil + herbs floating.
+- ส้มตำ: shredded GREEN papaya base with chili, lime, fish sauce; brownish-red dressing visible.
+
+Confidence & clarification rule (IMPORTANT — applies to vision input):
+- For each dish, mentally check 2-3 visual features that distinguish it from look-alikes BEFORE writing the name.
+- If two or more dishes are plausible AND you cannot pick one confidently (your confidence would be < 0.65), DO NOT guess. Instead set is_food=true, needs_clarification=true, items=[], and put the question in clarification_question naming the top 2 candidates: e.g. "ใช่ข้าวขาหมูหรือข้าวหมูแดงคะ?" or "ใช่ไก่ทอดหรือไก่ย่างคะ?".
+- It is much better to ask than to log a wrong dish — users hate seeing wrong food in their tracker, and a clarification round is cheap.`;
 
 export const parseImageToFoodLog = async (
   imageBase64: string,
@@ -219,7 +243,7 @@ export const parseImageToFoodLog = async (
         type: 'image_url',
         image_url: {
           url: `data:${mimeType};base64,${imageBase64}`,
-          detail: 'low',
+          detail: env.OPENAI_VISION_DETAIL,
         },
       },
     ];

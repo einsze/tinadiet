@@ -27,6 +27,10 @@ export const env = {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? '',
   OPENAI_MODEL: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
   OPENAI_VISION_MODEL: process.env.OPENAI_VISION_MODEL ?? 'gpt-4o',
+  OPENAI_VISION_DETAIL: ((): 'low' | 'high' | 'auto' => {
+    const raw = process.env.OPENAI_VISION_DETAIL ?? 'auto';
+    return raw === 'low' || raw === 'high' ? raw : 'auto';
+  })(),
   OPENAI_TIMEOUT_MS: Number(process.env.OPENAI_TIMEOUT_MS ?? 10000),
   PHOTO_DAILY_LIMIT: Number(process.env.PHOTO_DAILY_LIMIT ?? 10),
   CONSULT_DAILY_LIMIT: Number(process.env.CONSULT_DAILY_LIMIT ?? 20),
