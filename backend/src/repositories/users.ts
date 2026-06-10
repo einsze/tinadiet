@@ -29,6 +29,7 @@ type Stmts = {
   revertToFree: Statement;
   listExpiredPremium: Statement;
   revertAllExpired: Statement;
+  deleteById: Statement;
 };
 
 let _stmts: Stmts | null = null;
@@ -116,6 +117,7 @@ const stmts = (): Stmts => {
          AND premium_expires_at IS NOT NULL
          AND premium_expires_at <= ?`
     ),
+    deleteById: db.prepare(`DELETE FROM users WHERE id = ?`),
   };
   return _stmts;
 };
@@ -184,6 +186,11 @@ export const userRepository = {
   revertAllExpired: (nowIso: string): number => {
     const info = stmts().revertAllExpired.run(nowIso);
     return info.changes;
+  },
+
+  deleteById: (userId: number): boolean => {
+    const info = stmts().deleteById.run(userId);
+    return info.changes > 0;
   },
 
   syncWeightChange: (userId: number, weightKg: number): User | undefined => {

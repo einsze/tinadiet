@@ -11,6 +11,7 @@ import { ManualLogForm } from './ManualLogForm.js';
 import { WeightSection } from './WeightSection.js';
 import { ChatSection } from './ChatSection.js';
 import { PremiumSection } from './PremiumSection.js';
+import { SettingsSection } from './SettingsSection.js';
 
 const StatRow = ({
   label,
@@ -372,6 +373,8 @@ export const Dashboard = ({ user, streak, onEditProfile }: Props) => {
           <StatRow label="TDEE" value={user.tdee_kcal ?? '—'} unit="kcal" />
         </dl>
       </section>
+
+      <SettingsSection />
     </div>
   );
 };

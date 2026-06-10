@@ -95,6 +95,46 @@ export const cancelSubscriptionAtPeriodEnd = async (
   return upsertSubscriptionFromStripe(user.id, updated, 'manual_cancel');
 };
 
+export const cancelSubscriptionImmediately = async (
+  user: User
+): Promise<Subscription | null> => {
+  const latest = subscriptionsRepository.findLatestByUser(user.id);
+  if (latest === undefined) return null;
+  if (
+    latest.status === 'canceled' ||
+    latest.status === 'incomplete_expired'
+  ) {
+    return latest;
+  }
+  try {
+    const canceled = await stripeClient().subscriptions.cancel(
+      latest.provider_subscription_id
+    );
+    return upsertSubscriptionFromStripe(user.id, canceled, 'account_delete');
+  } catch (err) {
+    throw new StripeServiceError(
+      `Failed to cancel subscription ${latest.provider_subscription_id}: ${err instanceof Error ? err.message : String(err)}`,
+      err
+    );
+  }
+};
+
+export const deleteStripeCustomer = async (
+  stripeCustomerId: string
+): Promise<void> => {
+  if (env.STRIPE_SECRET_KEY.length === 0) {
+    return;
+  }
+  try {
+    await stripeClient().customers.del(stripeCustomerId);
+  } catch (err) {
+    throw new StripeServiceError(
+      `Failed to delete Stripe customer ${stripeCustomerId}: ${err instanceof Error ? err.message : String(err)}`,
+      err
+    );
+  }
+};
+
 const toIso = (unix: number | null | undefined): string | null => {
   if (unix === null || unix === undefined) return null;
   return new Date(unix * 1000).toISOString();

@@ -76,6 +76,27 @@ export const OnboardingSplash = ({ onContinue, displayName }: Props) => {
         <p className="mt-3 text-center text-xs text-slate-400">
           ขั้นตอนถัดไป: กรอกข้อมูลพื้นฐาน (~1 นาที) เพื่อให้ Tina คำนวณเป้าหมายแคลของคุณ
         </p>
+
+        <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-400">
+          การแตะ &quot;เริ่มเลย&quot; หมายความว่าคุณยอมรับ{' '}
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener"
+            className="text-brand-600 underline hover:text-brand-700"
+          >
+            Privacy Policy
+          </a>{' '}
+          และ{' '}
+          <a
+            href="/terms"
+            target="_blank"
+            rel="noopener"
+            className="text-brand-600 underline hover:text-brand-700"
+          >
+            Terms of Service
+          </a>
+        </p>
       </section>
     </div>
   );

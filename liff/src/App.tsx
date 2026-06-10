@@ -4,6 +4,15 @@ import { isProfileComplete } from './types/user.js';
 import { ProfileForm } from './components/ProfileForm.js';
 import { Dashboard } from './components/Dashboard.js';
 import { OnboardingSplash } from './components/OnboardingSplash.js';
+import { LegalPage } from './components/LegalPage.js';
+
+const getPublicLegalDocument = (): 'privacy' | 'terms' | null => {
+  if (typeof window === 'undefined') return null;
+  const path = window.location.pathname.replace(/\/+$/, '');
+  if (path === '/privacy') return 'privacy';
+  if (path === '/terms') return 'terms';
+  return null;
+};
 
 const StatusBadge = ({
   label,
@@ -70,6 +79,15 @@ const Shell = ({ children }: { children: React.ReactNode }) => (
 );
 
 const App = () => {
+  const publicDoc = getPublicLegalDocument();
+  if (publicDoc !== null) {
+    return <LegalPage document={publicDoc} />;
+  }
+
+  return <AuthenticatedApp />;
+};
+
+const AuthenticatedApp = () => {
   const { status, triggerLogin, setUser } = useSession();
   const [forceEdit, setForceEdit] = useState(false);
   const [splashDismissed, setSplashDismissed] = useState(false);

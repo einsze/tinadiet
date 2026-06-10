@@ -10,3 +10,55 @@
     @apply min-h-screen;
   }
 }
+
+@layer components {
+  .legal-prose h1 {
+    @apply mb-3 text-2xl font-bold text-slate-900;
+  }
+  .legal-prose h2 {
+    @apply mb-2 mt-8 text-lg font-semibold text-slate-900;
+  }
+  .legal-prose h3 {
+    @apply mb-1.5 mt-5 text-base font-semibold text-slate-800;
+  }
+  .legal-prose p {
+    @apply my-3 text-sm leading-relaxed text-slate-700;
+  }
+  .legal-prose ul {
+    @apply my-3 ml-5 list-disc space-y-1 text-sm text-slate-700;
+  }
+  .legal-prose ol {
+    @apply my-3 ml-5 list-decimal space-y-1 text-sm text-slate-700;
+  }
+  .legal-prose li {
+    @apply leading-relaxed;
+  }
+  .legal-prose blockquote {
+    @apply my-4 border-l-4 border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-900;
+  }
+  .legal-prose blockquote p {
+    @apply text-amber-900;
+  }
+  .legal-prose strong {
+    @apply font-semibold text-slate-900;
+  }
+  .legal-prose a {
+    @apply text-brand-600 underline hover:text-brand-700;
+  }
+  .legal-prose code {
+    @apply rounded bg-slate-100 px-1 py-0.5 text-xs text-slate-800;
+  }
+  .legal-prose table {
+    @apply my-4 w-full border-collapse text-xs;
+  }
+  .legal-prose th,
+  .legal-prose td {
+    @apply border border-slate-200 px-2 py-1.5 text-left align-top;
+  }
+  .legal-prose th {
+    @apply bg-slate-50 font-semibold text-slate-900;
+  }
+  .legal-prose hr {
+    @apply my-6 border-slate-200;
+  }
+}
