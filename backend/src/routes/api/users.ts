@@ -5,6 +5,14 @@ import { userRepository } from '../../repositories/users.js';
 import { foodLogsRepository } from '../../repositories/food_logs.js';
 import { todayInTimezone } from '../../domain/date.js';
 import { computeStreakFromDates } from '../../domain/streak.js';
+import {
+  generateMealSuggestion,
+  formatSuggestionForReply,
+  currentHourInTimezone,
+  CoachError,
+} from '../../services/coach.js';
+import { lineClient } from '../../line/client.js';
+import type { User } from '../../domain/types.js';
 
 const router = Router();
 
@@ -17,6 +25,52 @@ const computeStreakFor = (userId: number, today: string): number => {
     STREAK_LOOKBACK_DAYS
   );
   return computeStreakFromDates(dates, today);
+};
+
+const pushWelcomeSuggestion = async (user: User): Promise<void> => {
+  try {
+    const today = todayInTimezone(user.timezone);
+    const totals = foodLogsRepository.totalsByUserAndDate(user.id, today);
+    const recentLogs = foodLogsRepository.listByUserAndDate(user.id, today);
+    const { result, usage } = await generateMealSuggestion({
+      user,
+      trigger: 'welcome',
+      current_hour_local: currentHourInTimezone(user.timezone),
+      today_totals: totals,
+      recent_logs: recentLogs.reverse(),
+      just_eaten_kcal: null,
+    });
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'users.welcome.coach.ok',
+        db_user_id: user.id,
+        model: usage.model,
+        input_tokens: usage.input_tokens,
+        output_tokens: usage.output_tokens,
+        latency_ms: usage.latency_ms,
+      })
+    );
+    const goalLine = `🎯 เป้าหมายแคลของคุณ: ${user.daily_calorie_goal} kcal/วัน`;
+    const intro = `สวัสดีค่ะ ฉัน Tina 🌱\nยินดีต้อนรับเข้าสู่การดูแลโภชนาการกับฉันนะคะ`;
+    const suggestionText = formatSuggestionForReply(result);
+    const finalText = `${intro}\n\n${goalLine}\n\n${suggestionText}`;
+    await lineClient.pushMessage({
+      to: user.line_user_id,
+      messages: [{ type: 'text', text: finalText }],
+    });
+  } catch (err) {
+    const isCoachErr = err instanceof CoachError;
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        msg: 'users.welcome.coach.failed',
+        db_user_id: user.id,
+        is_coach_error: isCoachErr,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    );
+  }
 };
 
 const profileSchema = z.object({
@@ -90,6 +144,9 @@ router.patch('/me', requireAuth, (req: Request, res: Response) => {
   }
 
   try {
+    const previous = userRepository.findById(session.uid);
+    const wasFirstSetup =
+      previous !== undefined && previous.daily_calorie_goal === null;
     const user = userRepository.updateProfile(session.uid, parsed.data);
     console.log(
       JSON.stringify({
@@ -97,10 +154,14 @@ router.patch('/me', requireAuth, (req: Request, res: Response) => {
         msg: 'users.updateProfile.success',
         db_user_id: user.id,
         daily_calorie_goal: user.daily_calorie_goal,
+        first_setup: wasFirstSetup,
       })
     );
     const streak = computeStreakFor(user.id, todayInTimezone(user.timezone));
     res.status(200).json({ user, streak });
+    if (wasFirstSetup && user.daily_calorie_goal !== null) {
+      void pushWelcomeSuggestion(user);
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(

@@ -21,6 +21,12 @@ import {
   FoodParserError,
   type FoodParserResult,
 } from '../../services/food_parser.js';
+import {
+  generateMealSuggestion,
+  formatSuggestionForReply,
+  currentHourInTimezone,
+  CoachError,
+} from '../../services/coach.js';
 import { todayInTimezone } from '../../domain/date.js';
 import type { FoodLog, FoodLogTotals, User } from '../../domain/types.js';
 
@@ -246,14 +252,60 @@ const replyToParsedResult = async (
     };
   });
 
-  const replyText =
+  const confirmationText =
     savedItems.length === 1
       ? formatSingleConfirmation(user, savedItems[0]!)
       : formatMultiConfirmation(user, savedItems);
 
+  let suggestionText: string | null = null;
+  if (user.daily_calorie_goal !== null) {
+    try {
+      const today = todayInTimezone(user.timezone);
+      const totals = foodLogsRepository.totalsByUserAndDate(user.id, today);
+      const recentLogs = foodLogsRepository.listByUserAndDate(user.id, today);
+      const justEatenKcal = savedItems.reduce((sum, it) => sum + it.kcal, 0);
+      const { result, usage } = await generateMealSuggestion({
+        user,
+        trigger: 'after_log',
+        current_hour_local: currentHourInTimezone(user.timezone),
+        today_totals: totals,
+        recent_logs: recentLogs.reverse(),
+        just_eaten_kcal: justEatenKcal,
+      });
+      console.log(
+        JSON.stringify({
+          level: 'info',
+          msg: 'webhook.coach.suggestion.ok',
+          db_user_id: user.id,
+          model: usage.model,
+          input_tokens: usage.input_tokens,
+          output_tokens: usage.output_tokens,
+          latency_ms: usage.latency_ms,
+        })
+      );
+      suggestionText = formatSuggestionForReply(result);
+    } catch (err) {
+      const isCoachErr = err instanceof CoachError;
+      console.error(
+        JSON.stringify({
+          level: 'error',
+          msg: 'webhook.coach.suggestion.failed',
+          db_user_id: user.id,
+          is_coach_error: isCoachErr,
+          error: err instanceof Error ? err.message : String(err),
+        })
+      );
+    }
+  }
+
+  const finalText =
+    suggestionText !== null
+      ? `${confirmationText}\n\n${suggestionText}`
+      : confirmationText;
+
   await lineClient.replyMessage({
     replyToken,
-    messages: [{ type: 'text', text: replyText }],
+    messages: [{ type: 'text', text: finalText }],
   });
 };
 
