@@ -27,6 +27,8 @@ type Stmts = {
   findByStripeCustomerId: Statement;
   applyPremium: Statement;
   revertToFree: Statement;
+  listExpiredPremium: Statement;
+  revertAllExpired: Statement;
 };
 
 let _stmts: Stmts | null = null;
@@ -97,6 +99,23 @@ const stmts = (): Stmts => {
            updated_at = datetime('now')
        WHERE id = ?`
     ),
+    listExpiredPremium: db.prepare(
+      `SELECT ${USER_COLUMNS}
+       FROM users
+       WHERE plan = 'premium'
+         AND premium_expires_at IS NOT NULL
+         AND premium_expires_at <= ?
+       ORDER BY premium_expires_at ASC`
+    ),
+    revertAllExpired: db.prepare(
+      `UPDATE users
+       SET plan = 'free',
+           premium_expires_at = NULL,
+           updated_at = datetime('now')
+       WHERE plan = 'premium'
+         AND premium_expires_at IS NOT NULL
+         AND premium_expires_at <= ?`
+    ),
   };
   return _stmts;
 };
@@ -156,6 +175,15 @@ export const userRepository = {
     const s = stmts();
     s.revertToFree.run(userId);
     return s.findById.get(userId) as User | undefined;
+  },
+
+  listExpiredPremium: (nowIso: string): User[] => {
+    return stmts().listExpiredPremium.all(nowIso) as User[];
+  },
+
+  revertAllExpired: (nowIso: string): number => {
+    const info = stmts().revertAllExpired.run(nowIso);
+    return info.changes;
   },
 
   syncWeightChange: (userId: number, weightKg: number): User | undefined => {

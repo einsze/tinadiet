@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { env } from '../../config/env.js';
 import { runDailySummary } from '../../jobs/daily_summary.js';
 import { runWeeklySummary } from '../../jobs/weekly_summary.js';
+import { runExpirePremium } from '../../jobs/expire_premium.js';
 
 const router = Router();
 
@@ -42,6 +43,20 @@ router.post('/weekly-summary', async (req: Request, res: Response) => {
   const dryRun = req.query.dry_run === 'true';
   try {
     const result = await runWeeklySummary(dryRun);
+    res.status(200).json(result);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    res
+      .status(500)
+      .json({ error: { code: 'INTERNAL', message: msg } });
+  }
+});
+
+router.post('/expire-premium', async (req: Request, res: Response) => {
+  if (!checkSecret(req, res)) return;
+  const dryRun = req.query.dry_run === 'true';
+  try {
+    const result = await runExpirePremium(dryRun);
     res.status(200).json(result);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
