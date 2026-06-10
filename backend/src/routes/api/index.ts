@@ -4,6 +4,7 @@ import usersRouter from './users.js';
 import foodLogsRouter from './food_logs.js';
 import weightLogsRouter from './weight_logs.js';
 import chatRouter from './chat.js';
+import billingRouter from './billing.js';
 
 const router = Router();
 
@@ -12,5 +13,6 @@ router.use('/users', usersRouter);
 router.use('/food-logs', foodLogsRouter);
 router.use('/weight-logs', weightLogsRouter);
 router.use('/chat', chatRouter);
+router.use('/billing', billingRouter);
 
 export default router;

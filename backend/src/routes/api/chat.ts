@@ -8,7 +8,7 @@ import {
   ConsultationError,
 } from '../../services/consultation.js';
 import { todayInTimezone } from '../../domain/date.js';
-import { isProfileComplete } from '../../domain/profile.js';
+import { isProfileComplete, isPremium } from '../../domain/profile.js';
 import { env } from '../../config/env.js';
 
 const router = Router();
@@ -83,6 +83,17 @@ router.post('/messages', requireAuth, async (req: Request, res: Response) => {
         code: 'REQUIRE_PROFILE',
         message:
           'ตั้งค่าโปรไฟล์ของคุณก่อน Tina จึงจะตอบคำถามได้ค่ะ',
+      },
+    });
+    return;
+  }
+
+  if (!isPremium(user)) {
+    res.status(403).json({
+      error: {
+        code: 'PREMIUM_REQUIRED',
+        message:
+          'การถามคำปรึกษาเป็นฟีเจอร์ของ Premium ค่ะ สมัครเพื่อปลดล็อกได้เลย',
       },
     });
     return;

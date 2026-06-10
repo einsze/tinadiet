@@ -100,4 +100,33 @@ export const migrations: ReadonlyArray<Migration> = [
       CREATE INDEX idx_chat_messages_user_date    ON chat_messages(user_id, date);
     `,
   },
+  {
+    name: '0006_subscriptions',
+    sql: `
+      ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'free' CHECK(plan IN ('free','premium'));
+      ALTER TABLE users ADD COLUMN premium_expires_at TEXT;
+      ALTER TABLE users ADD COLUMN stripe_customer_id TEXT;
+      CREATE INDEX idx_users_stripe_customer ON users(stripe_customer_id);
+
+      CREATE TABLE subscriptions (
+        id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id                  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        provider                 TEXT NOT NULL CHECK(provider IN ('stripe')),
+        provider_subscription_id TEXT NOT NULL,
+        provider_customer_id     TEXT NOT NULL,
+        status                   TEXT NOT NULL,
+        current_period_start     TEXT,
+        current_period_end       TEXT,
+        cancel_at_period_end     INTEGER NOT NULL DEFAULT 0,
+        canceled_at              TEXT,
+        last_event_type          TEXT,
+        last_event_at            TEXT,
+        created_at               TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at               TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE UNIQUE INDEX idx_subscriptions_provider_sub
+        ON subscriptions(provider, provider_subscription_id);
+      CREATE INDEX idx_subscriptions_user ON subscriptions(user_id);
+    `,
+  },
 ];

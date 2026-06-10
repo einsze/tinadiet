@@ -10,6 +10,7 @@ import { KcalRing } from './KcalRing.js';
 import { ManualLogForm } from './ManualLogForm.js';
 import { WeightSection } from './WeightSection.js';
 import { ChatSection } from './ChatSection.js';
+import { PremiumSection } from './PremiumSection.js';
 
 const StatRow = ({
   label,
@@ -79,11 +80,18 @@ type LoadState =
   | { kind: 'ready'; date: string; logs: FoodLog[]; totals: FoodLogTotals }
   | { kind: 'error'; message: string };
 
+const computeIsPremium = (user: User, now: Date = new Date()): boolean => {
+  if (user.plan !== 'premium') return false;
+  if (user.premium_expires_at === null) return false;
+  return new Date(user.premium_expires_at).getTime() > now.getTime();
+};
+
 export const Dashboard = ({ user, streak, onEditProfile }: Props) => {
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [showAddForm, setShowAddForm] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editingLogId, setEditingLogId] = useState<number | null>(null);
+  const isPremium = computeIsPremium(user);
 
   const load = useCallback(async () => {
     setState({ kind: 'loading' });
@@ -144,6 +152,14 @@ export const Dashboard = ({ user, streak, onEditProfile }: Props) => {
             Hi{user.display_name ? `, ${user.display_name}` : ''} 👋
           </h2>
           <div className="flex items-center gap-2">
+            {isPremium ? (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-200 to-rose-200 px-2.5 py-1 text-xs font-semibold text-amber-800"
+                aria-label="Premium member"
+              >
+                ⭐ Premium
+              </span>
+            ) : null}
             {streak >= 2 ? (
               <span
                 className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700"
@@ -331,7 +347,9 @@ export const Dashboard = ({ user, streak, onEditProfile }: Props) => {
 
       <WeightSection />
 
-      <ChatSection />
+      <PremiumSection />
+
+      <ChatSection isPremium={isPremium} />
 
       <section className="rounded-xl bg-white p-6 shadow-sm">
         <h3 className="text-sm font-semibold text-slate-900">Your profile</h3>

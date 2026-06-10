@@ -2,6 +2,10 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { chatApi } from '../api/chat.js';
 import type { ChatMessage, ChatQuota } from '../types/chatMessage.js';
 
+type Props = {
+  isPremium: boolean;
+};
+
 type State =
   | { kind: 'loading' }
   | { kind: 'ready'; messages: ChatMessage[]; quota: ChatQuota }
@@ -52,7 +56,7 @@ const TypingBubble = () => (
   </div>
 );
 
-export const ChatSection = () => {
+export const ChatSection = ({ isPremium }: Props) => {
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -74,8 +78,40 @@ export const ChatSection = () => {
   }, []);
 
   useEffect(() => {
+    if (!isPremium) return;
     void load();
-  }, [load]);
+  }, [load, isPremium]);
+
+  if (!isPremium) {
+    return (
+      <section className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">
+              ถาม Tina · นักโภชนาการ
+            </h3>
+            <p className="mt-0.5 text-xs text-slate-500">
+              ฟีเจอร์ของ Premium · ปลดล็อกเพื่อใช้งาน
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+            ⭐ Premium
+          </span>
+        </div>
+        <div className="mt-4 rounded-lg border border-dashed border-slate-200 px-4 py-8 text-center">
+          <div className="text-4xl">🔒</div>
+          <p className="mt-3 text-sm text-slate-600">
+            อัปเกรดเป็น Premium เพื่อถาม Tina เรื่องโภชนาการ
+            <br />
+            โดย Tina จะตอบโดยอิงเป้าหมายของคุณ
+          </p>
+          <p className="mt-2 text-xs text-slate-400">
+            ดูตัวเลือกการอัปเกรดด้านบน
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   useEffect(() => {
     if (scrollRef.current !== null) {

@@ -1,3 +1,5 @@
+export type Plan = 'free' | 'premium';
+
 export type Gender = 'male' | 'female' | 'other';
 
 export type ActivityLevel =
@@ -28,6 +30,9 @@ export type User = {
   daily_fat_g: number | null;
   locale: string;
   timezone: string;
+  plan: Plan;
+  premium_expires_at: string | null;
+  stripe_customer_id: string | null;
   created_at: string;
   updated_at: string;
 };

@@ -33,7 +33,7 @@ import {
   ConsultationError,
 } from '../../services/consultation.js';
 import { todayInTimezone } from '../../domain/date.js';
-import { isProfileComplete } from '../../domain/profile.js';
+import { isProfileComplete, isPremium } from '../../domain/profile.js';
 import type { FoodLog, FoodLogTotals, User } from '../../domain/types.js';
 
 const router = Router();
@@ -55,6 +55,12 @@ const HINT_TEXT =
 
 const profileGateText = (): string =>
   `สวัสดีค่ะ ฉัน Tina 🌱\n\nก่อนเริ่มคำนวณแคลอรี่และให้คำแนะนำส่วนตัว Tina ต้องรู้ข้อมูลพื้นฐานของคุณก่อนนะคะ — เพศ ส่วนสูง น้ำหนัก เป้าหมาย และ activity level\n\nแตะลิงก์นี้เพื่อตั้งค่าโปรไฟล์ (ใช้เวลาประมาณ 1 นาที):\n${env.LIFF_URL}\n\nหลังตั้งค่าเสร็จ ส่งข้อความหรือรูปอาหารมาได้เลยค่ะ ☺️`;
+
+const premiumGatePhotoText = (): string =>
+  `📷 การถ่ายรูปอาหารเป็นฟีเจอร์ของ Premium ค่ะ\n\nสมัคร Premium 150 ฿/เดือน เพื่อปลดล็อก:\n• 📷 ถ่ายรูป Tina วิเคราะห์เมนูและแคลให้\n• 💬 ถามคำถามโภชนาการได้ทุกเรื่อง\n\nสมัครที่นี่:\n${env.LIFF_URL}\n\nหรือพิมพ์ชื่ออาหารแทนก็ได้นะคะ ☺️`;
+
+const premiumGateConsultationText = (): string =>
+  `💬 การถามคำปรึกษาเป็นฟีเจอร์ของ Premium ค่ะ\n\nสมัคร Premium 150 ฿/เดือน เพื่อปลดล็อก:\n• 💬 ถาม Tina เรื่องโภชนาการได้ทุกอย่าง อ้างอิงเป้าหมายของคุณ\n• 📷 ถ่ายรูปอาหาร Tina วิเคราะห์ให้\n\nสมัครที่นี่:\n${env.LIFF_URL} ☺️`;
 
 const WEIGHT_LOG_RE =
   /^\s*(?:น้ำหนัก|ชั่ง(?:น้ำหนัก)?|weight|wt)\s*[:=]?\s*(\d{2,3}(?:\.\d{1,2})?)\s*(?:kg|กก|กิโล)?\s*$/i;
@@ -357,6 +363,23 @@ const handleConsultation = async (
   replyToken: string,
   fallbackFromParser: boolean
 ): Promise<void> => {
+  if (!isPremium(user)) {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.premium_gate',
+        db_user_id: user.id,
+        feature: 'consultation',
+        fallback_from_parser: fallbackFromParser,
+      })
+    );
+    await lineClient.replyMessage({
+      replyToken,
+      messages: [{ type: 'text', text: premiumGateConsultationText() }],
+    });
+    return;
+  }
+
   void showLoadingAnimation(user.line_user_id, 20);
   try {
     const outcome = await runConsultation({ user, question: text });
@@ -617,6 +640,22 @@ const handleImageEvent = async (
     await lineClient.replyMessage({
       replyToken: event.replyToken,
       messages: [{ type: 'text', text: profileGateText() }],
+    });
+    return;
+  }
+
+  if (!isPremium(user)) {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.premium_gate',
+        db_user_id: user.id,
+        feature: 'photo',
+      })
+    );
+    await lineClient.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{ type: 'text', text: premiumGatePhotoText() }],
     });
     return;
   }

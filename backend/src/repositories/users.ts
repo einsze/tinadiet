@@ -11,6 +11,7 @@ const USER_COLUMNS = `
   bmr_kcal, tdee_kcal, daily_calorie_goal,
   daily_protein_g, daily_carbs_g, daily_fat_g,
   locale, timezone,
+  plan, premium_expires_at, stripe_customer_id,
   created_at, updated_at
 `;
 
@@ -22,6 +23,10 @@ type Stmts = {
   updateProfile: Statement;
   updateCurrentWeight: Statement;
   listProfileCompleted: Statement;
+  setStripeCustomerId: Statement;
+  findByStripeCustomerId: Statement;
+  applyPremium: Statement;
+  revertToFree: Statement;
 };
 
 let _stmts: Stmts | null = null;
@@ -70,6 +75,28 @@ const stmts = (): Stmts => {
        SET current_weight_kg = ?, updated_at = datetime('now')
        WHERE id = ?`
     ),
+    setStripeCustomerId: db.prepare(
+      `UPDATE users
+       SET stripe_customer_id = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    ),
+    findByStripeCustomerId: db.prepare(
+      `SELECT ${USER_COLUMNS} FROM users WHERE stripe_customer_id = ?`
+    ),
+    applyPremium: db.prepare(
+      `UPDATE users
+       SET plan = 'premium',
+           premium_expires_at = ?,
+           updated_at = datetime('now')
+       WHERE id = ?`
+    ),
+    revertToFree: db.prepare(
+      `UPDATE users
+       SET plan = 'free',
+           premium_expires_at = NULL,
+           updated_at = datetime('now')
+       WHERE id = ?`
+    ),
   };
   return _stmts;
 };
@@ -107,6 +134,28 @@ export const userRepository = {
 
   listProfileCompleted: (): User[] => {
     return stmts().listProfileCompleted.all() as User[];
+  },
+
+  findByStripeCustomerId: (stripeCustomerId: string): User | undefined => {
+    return stmts().findByStripeCustomerId.get(stripeCustomerId) as User | undefined;
+  },
+
+  setStripeCustomerId: (userId: number, stripeCustomerId: string): User | undefined => {
+    const s = stmts();
+    s.setStripeCustomerId.run(stripeCustomerId, userId);
+    return s.findById.get(userId) as User | undefined;
+  },
+
+  applyPremium: (userId: number, expiresAtIso: string): User | undefined => {
+    const s = stmts();
+    s.applyPremium.run(expiresAtIso, userId);
+    return s.findById.get(userId) as User | undefined;
+  },
+
+  revertToFree: (userId: number): User | undefined => {
+    const s = stmts();
+    s.revertToFree.run(userId);
+    return s.findById.get(userId) as User | undefined;
   },
 
   syncWeightChange: (userId: number, weightKg: number): User | undefined => {

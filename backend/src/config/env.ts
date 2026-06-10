@@ -45,6 +45,14 @@ export const env = {
   DAILY_SUMMARY_CRON: process.env.DAILY_SUMMARY_CRON ?? '0 21 * * *',
   WEEKLY_SUMMARY_CRON: process.env.WEEKLY_SUMMARY_CRON ?? '0 8 * * 1',
   JOBS_TRIGGER_SECRET: process.env.JOBS_TRIGGER_SECRET ?? '',
+
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? '',
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET ?? '',
+  STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID ?? '',
+  BILLING_SUCCESS_URL:
+    process.env.BILLING_SUCCESS_URL ?? 'https://app.tinadiet.com/?upgraded=1',
+  BILLING_CANCEL_URL:
+    process.env.BILLING_CANCEL_URL ?? 'https://app.tinadiet.com/?upgrade_canceled=1',
 } as const;
 
 export type Env = typeof env;

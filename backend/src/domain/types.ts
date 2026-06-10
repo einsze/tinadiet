@@ -1,3 +1,34 @@
+export type Plan = 'free' | 'premium';
+
+export type SubscriptionProvider = 'stripe';
+
+export type SubscriptionStatus =
+  | 'active'
+  | 'trialing'
+  | 'past_due'
+  | 'canceled'
+  | 'incomplete'
+  | 'incomplete_expired'
+  | 'unpaid'
+  | 'paused';
+
+export type Subscription = {
+  id: number;
+  user_id: number;
+  provider: SubscriptionProvider;
+  provider_subscription_id: string;
+  provider_customer_id: string;
+  status: SubscriptionStatus;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  canceled_at: string | null;
+  last_event_type: string | null;
+  last_event_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Gender = 'male' | 'female' | 'other';
 export type ActivityLevel =
   | 'sedentary'
@@ -26,6 +57,9 @@ export type User = {
   daily_fat_g: number | null;
   locale: string;
   timezone: string;
+  plan: Plan;
+  premium_expires_at: string | null;
+  stripe_customer_id: string | null;
   created_at: string;
   updated_at: string;
 };

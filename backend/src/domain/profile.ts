@@ -8,3 +8,9 @@ export const isProfileComplete = (user: User): boolean =>
   user.activity_level !== null &&
   user.goal_type !== null &&
   user.daily_calorie_goal !== null;
+
+export const isPremium = (user: User, now: Date = new Date()): boolean => {
+  if (user.plan !== 'premium') return false;
+  if (user.premium_expires_at === null) return false;
+  return new Date(user.premium_expires_at).getTime() > now.getTime();
+};
