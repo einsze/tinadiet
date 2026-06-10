@@ -24,17 +24,19 @@ const FeatureRow = ({
 export const OnboardingSplash = ({ onContinue, displayName }: Props) => {
   return (
     <div className="space-y-4">
-      <section className="overflow-hidden rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 p-8 text-center text-white shadow-sm">
-        <div className="text-6xl leading-none">🌱</div>
-        <h2 className="mt-3 text-2xl font-bold">
-          {displayName !== null
-            ? `สวัสดี ${displayName}`
-            : 'สวัสดีค่ะ'}
+      <section className="rounded-xl bg-gradient-to-b from-pink-50 to-white p-6 text-center shadow-sm">
+        <img
+          src="/tinadiet-mascot.png"
+          alt="Tina, your AI nutrition coach"
+          className="mx-auto h-56 w-56 rounded-full object-cover drop-shadow-md sm:h-64 sm:w-64"
+        />
+        <h2 className="mt-4 text-2xl font-bold text-slate-900">
+          {displayName !== null ? `สวัสดี ${displayName} 🌸` : 'สวัสดีค่ะ 🌸'}
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-white/90">
-          ฉันชื่อ <span className="font-semibold">Tina</span> — coach โภชนาการส่วนตัวบน LINE
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
+          ฉันชื่อ <span className="font-semibold text-rose-500">Tina</span> — coach โภชนาการส่วนตัวบน LINE
           <br />
-          สำหรับคนไทยที่อยากดูแลตัวเอง ☺️
+          สำหรับคนไทยที่อยากดูแลตัวเองอย่างยั่งยืน ☺️
         </p>
       </section>
 
