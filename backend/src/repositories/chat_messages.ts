@@ -11,6 +11,7 @@ type Stmts = {
   insert: Statement;
   findById: Statement;
   listRecentWindow: Statement;
+  listRecent: Statement;
   countQuestionsToday: Statement;
 };
 
@@ -31,6 +32,13 @@ const stmts = (): Stmts => {
        FROM chat_messages
        WHERE user_id = ?
          AND created_at >= datetime('now', ?)
+       ORDER BY created_at DESC
+       LIMIT ?`
+    ),
+    listRecent: db.prepare(
+      `SELECT ${CHAT_MESSAGE_COLUMNS}
+       FROM chat_messages
+       WHERE user_id = ?
        ORDER BY created_at DESC
        LIMIT ?`
     ),
@@ -88,6 +96,11 @@ export const chatMessagesRepository = {
       modifier,
       limit
     ) as RawChatMessage[];
+    return rows.map(hydrate).reverse();
+  },
+
+  listRecent: (userId: number, limit: number): ChatMessage[] => {
+    const rows = stmts().listRecent.all(userId, limit) as RawChatMessage[];
     return rows.map(hydrate).reverse();
   },
 

@@ -29,11 +29,10 @@ import {
   CoachError,
 } from '../../services/coach.js';
 import {
-  generateConsultationAnswer,
+  runConsultation,
   ConsultationError,
 } from '../../services/consultation.js';
 import { todayInTimezone } from '../../domain/date.js';
-import { computeStreakFromDates } from '../../domain/streak.js';
 import type { FoodLog, FoodLogTotals, User } from '../../domain/types.js';
 
 const router = Router();
@@ -354,96 +353,50 @@ const handleConsultation = async (
   replyToken: string,
   fallbackFromParser: boolean
 ): Promise<void> => {
-  const today = todayInTimezone(user.timezone);
-  const questionsToday = chatMessagesRepository.countQuestionsToday(
-    user.id,
-    today
-  );
-
-  if (questionsToday >= env.CONSULT_DAILY_LIMIT) {
-    console.log(
-      JSON.stringify({
-        level: 'info',
-        msg: 'webhook.consultation.quota_exceeded',
-        db_user_id: user.id,
-        count: questionsToday,
-        limit: env.CONSULT_DAILY_LIMIT,
-      })
-    );
-    await lineClient.replyMessage({
-      replyToken,
-      messages: [
-        {
-          type: 'text',
-          text: `วันนี้ถามครบ ${env.CONSULT_DAILY_LIMIT} คำถามแล้วค่ะ\nพรุ่งนี้ Tina ยินดีตอบใหม่นะคะ 🌱`,
-        },
-      ],
-    });
-    return;
-  }
-
-  chatMessagesRepository.append({
-    user_id: user.id,
-    user_timezone: user.timezone,
-    role: 'user',
-    content: text,
-    refused: false,
-  });
-
-  const totals = foodLogsRepository.totalsByUserAndDate(user.id, today);
-  const todayLogs = foodLogsRepository.listByUserAndDate(user.id, today);
-  const recentWeights = weightLogsRepository.listRecent(user.id, 14);
-  const recentDates = foodLogsRepository.distinctLogDatesRecent(
-    user.id,
-    today,
-    30
-  );
-  const streak = computeStreakFromDates(recentDates, today);
-  const windowMessages = chatMessagesRepository.listRecentWindow(
-    user.id,
-    env.CONSULT_HISTORY_MINUTES,
-    env.CONSULT_HISTORY_MAX_MESSAGES
-  );
-  const history = windowMessages.slice(0, -1);
-
   try {
-    const { result, usage } = await generateConsultationAnswer({
-      user,
-      question: text,
-      today_totals: totals,
-      today_logs: todayLogs,
-      recent_weight_logs: recentWeights,
-      streak_days: streak,
-      history,
-    });
+    const outcome = await runConsultation({ user, question: text });
 
-    chatMessagesRepository.append({
-      user_id: user.id,
-      user_timezone: user.timezone,
-      role: 'assistant',
-      content: result.answer_th,
-      refused: result.refused,
-    });
+    if (outcome.kind === 'quota_exceeded') {
+      console.log(
+        JSON.stringify({
+          level: 'info',
+          msg: 'webhook.consultation.quota_exceeded',
+          db_user_id: user.id,
+          count: outcome.questions_today,
+          limit: outcome.limit,
+        })
+      );
+      await lineClient.replyMessage({
+        replyToken,
+        messages: [
+          {
+            type: 'text',
+            text: `วันนี้ถามครบ ${outcome.limit} คำถามแล้วค่ะ\nพรุ่งนี้ Tina ยินดีตอบใหม่นะคะ 🌱`,
+          },
+        ],
+      });
+      return;
+    }
 
     console.log(
       JSON.stringify({
         level: 'info',
         msg: 'webhook.consultation.ok',
         db_user_id: user.id,
-        model: usage.model,
-        input_tokens: usage.input_tokens,
-        output_tokens: usage.output_tokens,
-        latency_ms: usage.latency_ms,
-        topic: result.topic,
-        refused: result.refused,
+        model: outcome.usage.model,
+        input_tokens: outcome.usage.input_tokens,
+        output_tokens: outcome.usage.output_tokens,
+        latency_ms: outcome.usage.latency_ms,
+        topic: outcome.topic,
+        refused: outcome.refused,
         fallback_from_parser: fallbackFromParser,
-        questions_today: questionsToday + 1,
+        questions_today: outcome.questions_today,
       })
     );
 
     await lineClient.replyMessage({
       replyToken,
-      messages: [{ type: 'text', text: result.answer_th }],
+      messages: [{ type: 'text', text: outcome.assistant_message.content }],
     });
   } catch (err) {
     const isConsultErr = err instanceof ConsultationError;

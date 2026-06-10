@@ -1,5 +1,10 @@
 import { env } from '../config/env.js';
 import { openai } from './openai.js';
+import { foodLogsRepository } from '../repositories/food_logs.js';
+import { weightLogsRepository } from '../repositories/weight_logs.js';
+import { chatMessagesRepository } from '../repositories/chat_messages.js';
+import { todayInTimezone } from '../domain/date.js';
+import { computeStreakFromDates } from '../domain/streak.js';
 import type {
   ChatMessage,
   FoodLog,
@@ -181,6 +186,87 @@ export class ConsultationError extends Error {
     this.name = 'ConsultationError';
   }
 }
+
+export type RunConsultationOutcome =
+  | { kind: 'answered'; user_message: ChatMessage; assistant_message: ChatMessage; topic: ConsultationTopic; refused: boolean; questions_today: number; limit: number; usage: ConsultationUsage }
+  | { kind: 'quota_exceeded'; questions_today: number; limit: number };
+
+export type RunConsultationInput = {
+  user: User;
+  question: string;
+};
+
+export const runConsultation = async (
+  input: RunConsultationInput
+): Promise<RunConsultationOutcome> => {
+  const { user, question } = input;
+  const today = todayInTimezone(user.timezone);
+  const questionsToday = chatMessagesRepository.countQuestionsToday(
+    user.id,
+    today
+  );
+
+  if (questionsToday >= env.CONSULT_DAILY_LIMIT) {
+    return {
+      kind: 'quota_exceeded',
+      questions_today: questionsToday,
+      limit: env.CONSULT_DAILY_LIMIT,
+    };
+  }
+
+  const userMessage = chatMessagesRepository.append({
+    user_id: user.id,
+    user_timezone: user.timezone,
+    role: 'user',
+    content: question,
+    refused: false,
+  });
+
+  const totals = foodLogsRepository.totalsByUserAndDate(user.id, today);
+  const todayLogs = foodLogsRepository.listByUserAndDate(user.id, today);
+  const recentWeights = weightLogsRepository.listRecent(user.id, 14);
+  const recentDates = foodLogsRepository.distinctLogDatesRecent(
+    user.id,
+    today,
+    30
+  );
+  const streak = computeStreakFromDates(recentDates, today);
+  const windowMessages = chatMessagesRepository.listRecentWindow(
+    user.id,
+    env.CONSULT_HISTORY_MINUTES,
+    env.CONSULT_HISTORY_MAX_MESSAGES
+  );
+  const history = windowMessages.slice(0, -1);
+
+  const { result, usage } = await generateConsultationAnswer({
+    user,
+    question,
+    today_totals: totals,
+    today_logs: todayLogs,
+    recent_weight_logs: recentWeights,
+    streak_days: streak,
+    history,
+  });
+
+  const assistantMessage = chatMessagesRepository.append({
+    user_id: user.id,
+    user_timezone: user.timezone,
+    role: 'assistant',
+    content: result.answer_th,
+    refused: result.refused,
+  });
+
+  return {
+    kind: 'answered',
+    user_message: userMessage,
+    assistant_message: assistantMessage,
+    topic: result.topic,
+    refused: result.refused,
+    questions_today: questionsToday + 1,
+    limit: env.CONSULT_DAILY_LIMIT,
+    usage,
+  };
+};
 
 export const generateConsultationAnswer = async (
   ctx: ConsultationContext

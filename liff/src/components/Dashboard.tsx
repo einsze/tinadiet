@@ -9,6 +9,7 @@ import type { User } from '../types/user.js';
 import { KcalRing } from './KcalRing.js';
 import { ManualLogForm } from './ManualLogForm.js';
 import { WeightSection } from './WeightSection.js';
+import { ChatSection } from './ChatSection.js';
 
 const StatRow = ({
   label,
@@ -329,6 +330,8 @@ export const Dashboard = ({ user, streak, onEditProfile }: Props) => {
       </section>
 
       <WeightSection />
+
+      <ChatSection />
 
       <section className="rounded-xl bg-white p-6 shadow-sm">
         <h3 className="text-sm font-semibold text-slate-900">Your profile</h3>
