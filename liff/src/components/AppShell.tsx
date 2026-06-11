@@ -1,7 +1,6 @@
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import {
-  ChevronLeft,
   Crown,
   Home,
   LifeBuoy,
@@ -89,26 +88,16 @@ const RootHeader = () => (
 
 const SubpageHeader = ({ meta }: { meta: SubpageMeta }) => (
   <header className="sticky top-0 z-10 border-b border-brand-100 bg-white/95 backdrop-blur-md">
-    <div className="flex items-center justify-between px-4 pt-2.5">
-      <Link
-        to="/"
-        className="inline-flex items-center gap-0.5 text-xs font-medium text-slate-500 transition hover:text-brand-700"
-      >
-        <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2.4} />
-        <span>Home</span>
-      </Link>
-      <span aria-hidden className="w-12" />
-    </div>
-    <div className="relative px-4 pb-3 pt-1 text-center">
+    <div className="relative px-4 pb-3 pt-4 text-center">
       <span
         aria-hidden
-        className="pointer-events-none absolute left-6 top-1 text-xs opacity-25 select-none"
+        className="pointer-events-none absolute left-6 top-3 text-xs opacity-25 select-none"
       >
         ✨
       </span>
       <span
         aria-hidden
-        className="pointer-events-none absolute right-6 top-1 text-xs opacity-25 select-none"
+        className="pointer-events-none absolute right-6 top-3 text-xs opacity-25 select-none"
       >
         ✨
       </span>
