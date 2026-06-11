@@ -11,6 +11,65 @@
   }
 }
 
+@layer utilities {
+  @keyframes wiggle-float {
+    0%,
+    100% {
+      transform: rotate(-2.5deg) translateY(0);
+    }
+    50% {
+      transform: rotate(2.5deg) translateY(-6px);
+    }
+  }
+  .animate-wiggle-float {
+    animation: wiggle-float 2.6s ease-in-out infinite;
+    transform-origin: center bottom;
+  }
+
+  @keyframes soft-float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+  .animate-soft-float {
+    animation: soft-float 2.8s ease-in-out infinite;
+  }
+
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(0.9);
+      opacity: 0.7;
+    }
+    100% {
+      transform: scale(1.25);
+      opacity: 0;
+    }
+  }
+  .animate-pulse-ring {
+    animation: pulse-ring 2.2s ease-out infinite;
+  }
+
+  @keyframes bounce-dot {
+    0%,
+    80%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.4;
+    }
+    40% {
+      transform: translateY(-4px);
+      opacity: 1;
+    }
+  }
+  .animate-bounce-dot {
+    animation: bounce-dot 1.2s ease-in-out infinite;
+  }
+}
+
 @layer components {
   .legal-prose h1 {
     @apply mb-3 text-2xl font-bold text-slate-900;

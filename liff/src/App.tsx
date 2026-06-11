@@ -11,6 +11,7 @@ import { ProfileForm } from './components/ProfileForm.js';
 import { OnboardingSplash } from './components/OnboardingSplash.js';
 import { LegalPage } from './components/LegalPage.js';
 import { AppShell } from './components/AppShell.js';
+import { AuthLoadingScreen } from './components/AuthLoadingScreen.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { ProfilePage } from './pages/ProfilePage.js';
 import { PremiumPage } from './pages/PremiumPage.js';
@@ -99,16 +100,7 @@ const AuthGate = () => {
   const [splashDismissed, setSplashDismissed] = useState(false);
 
   if (status.kind === 'idle' || status.kind === 'initializing') {
-    return (
-      <StandaloneShell>
-        <div className="rounded-xl bg-white p-6 shadow-sm">
-          <StatusBadge label="Initializing LIFF…" tone="info" />
-          <p className="mt-3 text-sm text-slate-500">
-            Loading session from LINE…
-          </p>
-        </div>
-      </StandaloneShell>
-    );
+    return <AuthLoadingScreen message="Loading" />;
   }
 
   if (status.kind === 'needs_login') {
@@ -136,16 +128,7 @@ const AuthGate = () => {
   }
 
   if (status.kind === 'authenticating') {
-    return (
-      <StandaloneShell>
-        <div className="rounded-xl bg-white p-6 shadow-sm">
-          <StatusBadge label="Authenticating…" tone="info" />
-          <p className="mt-3 text-sm text-slate-500">
-            Exchanging LIFF token for session…
-          </p>
-        </div>
-      </StandaloneShell>
-    );
+    return <AuthLoadingScreen message="Signing you in" />;
   }
 
   if (status.kind === 'error') {
