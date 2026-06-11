@@ -1,10 +1,12 @@
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import {
+  ChevronLeft,
   Crown,
   Home,
   LifeBuoy,
   MessageCircleHeart,
+  Settings as SettingsIcon,
   Sparkles,
   UserCog,
   type LucideIcon,
@@ -24,13 +26,38 @@ const NAV_ITEMS: ReadonlyArray<NavItem> = [
   { to: '/support', label: 'Support', Icon: LifeBuoy },
 ];
 
-const PAGE_TITLES: Record<string, string> = {
-  '/': 'Dashboard',
-  '/chat': 'Ask Tina',
-  '/premium': 'Premium',
-  '/profile': 'Profile',
-  '/settings': 'Settings',
-  '/support': 'Support',
+type SubpageMeta = {
+  title: string;
+  Icon: LucideIcon;
+  tagline: string;
+};
+
+const SUBPAGE_META: Record<string, SubpageMeta> = {
+  '/chat': {
+    title: 'Ask Tina',
+    Icon: MessageCircleHeart,
+    tagline: 'ปรึกษานักโภชนาการส่วนตัวของคุณ',
+  },
+  '/premium': {
+    title: 'Premium',
+    Icon: Crown,
+    tagline: 'ปลดล็อกทุกฟีเจอร์ของ Tina',
+  },
+  '/profile': {
+    title: 'Profile',
+    Icon: UserCog,
+    tagline: 'ข้อมูลและเป้าหมายของคุณ',
+  },
+  '/settings': {
+    title: 'Settings',
+    Icon: SettingsIcon,
+    tagline: 'จัดการบัญชีและความเป็นส่วนตัว',
+  },
+  '/support': {
+    title: 'Support',
+    Icon: LifeBuoy,
+    tagline: 'ติดปัญหา? เราช่วยได้ค่ะ',
+  },
 };
 
 const RootHeader = () => (
@@ -60,20 +87,42 @@ const RootHeader = () => (
   </header>
 );
 
-const SubpageHeader = ({ title }: { title: string }) => (
-  <header className="sticky top-0 z-10 border-b border-brand-100 bg-white/90 px-5 py-3 backdrop-blur-md">
-    <div className="flex items-center justify-between gap-3">
+const SubpageHeader = ({ meta }: { meta: SubpageMeta }) => (
+  <header className="sticky top-0 z-10 border-b border-brand-100 bg-white/95 backdrop-blur-md">
+    <div className="flex items-center justify-between px-4 pt-2.5">
       <Link
         to="/"
-        className="flex items-center gap-1 text-sm font-medium text-brand-600 transition hover:text-brand-700"
+        className="inline-flex items-center gap-0.5 text-xs font-medium text-slate-500 transition hover:text-brand-700"
       >
-        <span aria-hidden>←</span>
+        <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2.4} />
         <span>Home</span>
       </Link>
-      <h1 className="text-sm font-semibold tracking-tight text-slate-900">
-        {title}
+      <span aria-hidden className="w-12" />
+    </div>
+    <div className="relative px-4 pb-3 pt-1 text-center">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-6 top-1 text-xs opacity-25 select-none"
+      >
+        ✨
+      </span>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-6 top-1 text-xs opacity-25 select-none"
+      >
+        ✨
+      </span>
+      <h1 className="inline-flex items-center gap-2 text-xl font-extrabold tracking-tight">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-brand-200/70 shadow-sm ring-1 ring-brand-200">
+          <meta.Icon className="h-[18px] w-[18px] text-brand-600" strokeWidth={2.4} />
+        </span>
+        <span className="bg-gradient-to-r from-brand-600 via-brand-500 to-brand-400 bg-clip-text text-transparent">
+          {meta.title}
+        </span>
       </h1>
-      <span aria-hidden className="w-14" />
+      <p className="mt-0.5 text-[11px] font-medium text-slate-500">
+        {meta.tagline}
+      </p>
     </div>
   </header>
 );
@@ -125,14 +174,20 @@ type Props = {
   showBottomNav?: boolean;
 };
 
+const FALLBACK_SUBPAGE_META: SubpageMeta = {
+  title: 'Tina Diet',
+  Icon: Home,
+  tagline: '',
+};
+
 export const AppShell = ({ children, showBottomNav = true }: Props) => {
   const location = useLocation();
   const isRoot = location.pathname === '/' || location.pathname === '';
-  const title = PAGE_TITLES[location.pathname] ?? 'Tina Diet';
+  const meta = SUBPAGE_META[location.pathname] ?? FALLBACK_SUBPAGE_META;
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-brand-50 via-white to-brand-50/40">
-      {isRoot ? <RootHeader /> : <SubpageHeader title={title} />}
+      {isRoot ? <RootHeader /> : <SubpageHeader meta={meta} />}
       <main className="flex-1 px-5 pb-28 pt-2">{children}</main>
       {showBottomNav ? <BottomNav /> : null}
     </div>
