@@ -1,37 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useSession } from '../state/session.js';
 import { foodLogsApi } from '../api/foodLogs.js';
 import {
   formatKcalRange,
   type FoodLog,
   type FoodLogTotals,
 } from '../types/foodLog.js';
-import type { User } from '../types/user.js';
-import { KcalRing } from './KcalRing.js';
-import { ManualLogForm } from './ManualLogForm.js';
-import { WeightSection } from './WeightSection.js';
-import { ChatSection } from './ChatSection.js';
-import { PremiumSection } from './PremiumSection.js';
-import { SettingsSection } from './SettingsSection.js';
+import { isPremium as computeIsPremium } from '../lib/premium.js';
+import { KcalRing } from '../components/KcalRing.js';
+import { ManualLogForm } from '../components/ManualLogForm.js';
+import { WeightSection } from '../components/WeightSection.js';
 
-const StatRow = ({
-  label,
-  value,
-  unit,
-}: {
-  label: string;
-  value: string | number;
-  unit?: string;
-}) => (
-  <div className="flex items-center justify-between py-2">
-    <dt className="text-sm text-slate-500">{label}</dt>
-    <dd className="text-sm font-medium text-slate-900">
-      {value}
-      {unit !== undefined ? (
-        <span className="ml-1 text-xs font-normal text-slate-500">{unit}</span>
-      ) : null}
-    </dd>
-  </div>
-);
+type LoadState =
+  | { kind: 'loading' }
+  | { kind: 'ready'; date: string; logs: FoodLog[]; totals: FoodLogTotals }
+  | { kind: 'error'; message: string };
 
 const MacroProgress = ({
   label,
@@ -70,29 +54,12 @@ const MacroProgress = ({
   );
 };
 
-type Props = {
-  user: User;
-  streak: number;
-  onEditProfile: () => void;
-};
-
-type LoadState =
-  | { kind: 'loading' }
-  | { kind: 'ready'; date: string; logs: FoodLog[]; totals: FoodLogTotals }
-  | { kind: 'error'; message: string };
-
-const computeIsPremium = (user: User, now: Date = new Date()): boolean => {
-  if (user.plan !== 'premium') return false;
-  if (user.premium_expires_at === null) return false;
-  return new Date(user.premium_expires_at).getTime() > now.getTime();
-};
-
-export const Dashboard = ({ user, streak, onEditProfile }: Props) => {
+export const DashboardPage = () => {
+  const { status } = useSession();
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [showAddForm, setShowAddForm] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editingLogId, setEditingLogId] = useState<number | null>(null);
-  const isPremium = computeIsPremium(user);
 
   const load = useCallback(async () => {
     setState({ kind: 'loading' });
@@ -116,6 +83,11 @@ export const Dashboard = ({ user, streak, onEditProfile }: Props) => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  if (status.kind !== 'authenticated') return null;
+
+  const { user, streak } = status;
+  const isPremium = computeIsPremium(user);
 
   const handleDelete = async (log: FoodLog) => {
     const name = log.food_name_th ?? log.food_name_en ?? log.raw_text ?? 'this log';
@@ -154,12 +126,13 @@ export const Dashboard = ({ user, streak, onEditProfile }: Props) => {
           </h2>
           <div className="flex items-center gap-2">
             {isPremium ? (
-              <span
+              <Link
+                to="/premium"
                 className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-200 to-rose-200 px-2.5 py-1 text-xs font-semibold text-amber-800"
                 aria-label="Premium member"
               >
                 ⭐ Premium
-              </span>
+              </Link>
             ) : null}
             {streak >= 2 ? (
               <span
@@ -169,13 +142,6 @@ export const Dashboard = ({ user, streak, onEditProfile }: Props) => {
                 🔥 {streak}d
               </span>
             ) : null}
-            <button
-              type="button"
-              onClick={onEditProfile}
-              className="text-xs font-medium text-brand-700 hover:underline"
-            >
-              Edit profile
-            </button>
           </div>
         </div>
         <p className="mt-1 text-sm text-slate-500">
@@ -347,34 +313,6 @@ export const Dashboard = ({ user, streak, onEditProfile }: Props) => {
       </section>
 
       <WeightSection />
-
-      <PremiumSection />
-
-      <ChatSection isPremium={isPremium} />
-
-      <section className="rounded-xl bg-white p-6 shadow-sm">
-        <h3 className="text-sm font-semibold text-slate-900">Your profile</h3>
-        <dl className="mt-2 divide-y divide-slate-100">
-          <StatRow label="Gender" value={user.gender ?? '—'} />
-          <StatRow label="Height" value={user.height_cm ?? '—'} unit="cm" />
-          <StatRow
-            label="Current weight"
-            value={user.current_weight_kg ?? '—'}
-            unit="kg"
-          />
-          <StatRow
-            label="Target weight"
-            value={user.target_weight_kg ?? '—'}
-            unit="kg"
-          />
-          <StatRow label="Activity" value={user.activity_level ?? '—'} />
-          <StatRow label="Goal" value={user.goal_type ?? '—'} />
-          <StatRow label="BMR" value={user.bmr_kcal ?? '—'} unit="kcal" />
-          <StatRow label="TDEE" value={user.tdee_kcal ?? '—'} unit="kcal" />
-        </dl>
-      </section>
-
-      <SettingsSection />
     </div>
   );
 };

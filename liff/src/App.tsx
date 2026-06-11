@@ -1,18 +1,23 @@
 import { useState } from 'react';
+import {
+  BrowserRouter,
+  Outlet,
+  Route,
+  Routes,
+} from 'react-router-dom';
 import { useSession, type LiffDebug } from './state/session.js';
 import { isProfileComplete } from './types/user.js';
 import { ProfileForm } from './components/ProfileForm.js';
-import { Dashboard } from './components/Dashboard.js';
 import { OnboardingSplash } from './components/OnboardingSplash.js';
 import { LegalPage } from './components/LegalPage.js';
-
-const getPublicLegalDocument = (): 'privacy' | 'terms' | null => {
-  if (typeof window === 'undefined') return null;
-  const path = window.location.pathname.replace(/\/+$/, '');
-  if (path === '/privacy') return 'privacy';
-  if (path === '/terms') return 'terms';
-  return null;
-};
+import { AppShell } from './components/AppShell.js';
+import { DashboardPage } from './pages/DashboardPage.js';
+import { ProfilePage } from './pages/ProfilePage.js';
+import { PremiumPage } from './pages/PremiumPage.js';
+import { ChatPage } from './pages/ChatPage.js';
+import { SettingsPage } from './pages/SettingsPage.js';
+import { SupportPage } from './pages/SupportPage.js';
+import { NotFoundPage } from './pages/NotFoundPage.js';
 
 const StatusBadge = ({
   label,
@@ -39,7 +44,7 @@ const StatusBadge = ({
 };
 
 const DebugBox = ({ debug }: { debug: LiffDebug }) => (
-  <details className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+  <details className="mx-6 mb-4 mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
     <summary className="cursor-pointer select-none font-medium">
       LIFF debug
     </summary>
@@ -68,7 +73,7 @@ const DebugBox = ({ debug }: { debug: LiffDebug }) => (
   </details>
 );
 
-const Shell = ({ children }: { children: React.ReactNode }) => (
+const StandaloneShell = ({ children }: { children: React.ReactNode }) => (
   <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white">
     <header className="px-6 pt-8 pb-4">
       <h1 className="text-2xl font-bold text-brand-900">Tina Diet</h1>
@@ -78,37 +83,28 @@ const Shell = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
-const App = () => {
-  const publicDoc = getPublicLegalDocument();
-  if (publicDoc !== null) {
-    return <LegalPage document={publicDoc} />;
-  }
-
-  return <AuthenticatedApp />;
-};
-
-const AuthenticatedApp = () => {
+const AuthGate = () => {
   const { status, triggerLogin, setUser } = useSession();
   const [forceEdit, setForceEdit] = useState(false);
   const [splashDismissed, setSplashDismissed] = useState(false);
 
   if (status.kind === 'idle' || status.kind === 'initializing') {
     return (
-      <Shell>
+      <StandaloneShell>
         <div className="rounded-xl bg-white p-6 shadow-sm">
           <StatusBadge label="Initializing LIFF…" tone="info" />
           <p className="mt-3 text-sm text-slate-500">
             Loading session from LINE…
           </p>
         </div>
-      </Shell>
+      </StandaloneShell>
     );
   }
 
   if (status.kind === 'needs_login') {
     const inLine = status.debug.inClient;
     return (
-      <Shell>
+      <StandaloneShell>
         <div className="rounded-xl bg-white p-6 shadow-sm">
           <StatusBadge label="Login required" tone="warn" />
           <p className="mt-3 text-sm text-slate-600">
@@ -125,26 +121,26 @@ const AuthenticatedApp = () => {
           </button>
           <DebugBox debug={status.debug} />
         </div>
-      </Shell>
+      </StandaloneShell>
     );
   }
 
   if (status.kind === 'authenticating') {
     return (
-      <Shell>
+      <StandaloneShell>
         <div className="rounded-xl bg-white p-6 shadow-sm">
           <StatusBadge label="Authenticating…" tone="info" />
           <p className="mt-3 text-sm text-slate-500">
             Exchanging LIFF token for session…
           </p>
         </div>
-      </Shell>
+      </StandaloneShell>
     );
   }
 
   if (status.kind === 'error') {
     return (
-      <Shell>
+      <StandaloneShell>
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-6">
           <StatusBadge label="Error" tone="error" />
           <p className="mt-3 text-sm font-medium text-rose-900">
@@ -157,28 +153,28 @@ const AuthenticatedApp = () => {
             <DebugBox debug={status.debug} />
           ) : null}
         </div>
-      </Shell>
+      </StandaloneShell>
     );
   }
 
-  const { user, streak, debug } = status;
+  const { user, debug } = status;
   const completed = isProfileComplete(user);
 
   if (!completed && !forceEdit && !splashDismissed) {
     return (
-      <Shell>
+      <StandaloneShell>
         <OnboardingSplash
           displayName={user.display_name}
           onContinue={() => setSplashDismissed(true)}
         />
         <DebugBox debug={debug} />
-      </Shell>
+      </StandaloneShell>
     );
   }
 
   if (!completed || forceEdit) {
     return (
-      <Shell>
+      <StandaloneShell>
         <ProfileForm
           user={user}
           onSaved={(updated) => {
@@ -188,19 +184,40 @@ const AuthenticatedApp = () => {
           }}
         />
         <DebugBox debug={debug} />
-      </Shell>
+      </StandaloneShell>
     );
   }
 
+  return <Outlet context={{ debug }} />;
+};
+
+const ShellLayout = () => {
   return (
-    <Shell>
-      <Dashboard
-        user={user}
-        streak={streak}
-        onEditProfile={() => setForceEdit(true)}
-      />
-      <DebugBox debug={debug} />
-    </Shell>
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  );
+};
+
+const App = () => {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/privacy" element={<LegalPage document="privacy" />} />
+        <Route path="/terms" element={<LegalPage document="terms" />} />
+        <Route element={<AuthGate />}>
+          <Route element={<ShellLayout />}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/premium" element={<PremiumPage />} />
+            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/support" element={<SupportPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 };
 
