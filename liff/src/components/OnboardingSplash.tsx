@@ -34,7 +34,7 @@ export const OnboardingSplash = ({ onContinue, displayName }: Props) => {
           {displayName !== null ? `สวัสดี ${displayName} 🌸` : 'สวัสดีค่ะ 🌸'}
         </h2>
         <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
-          ฉันชื่อ <span className="font-semibold text-rose-500">Tina</span> — coach โภชนาการส่วนตัวบน LINE
+          ฉันชื่อ <span className="font-semibold text-brand-600">Tina</span> — coach โภชนาการส่วนตัวบน LINE
           <br />
           สำหรับคนไทยที่อยากดูแลตัวเองอย่างยั่งยืน ☺️
         </p>

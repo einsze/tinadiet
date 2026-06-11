@@ -148,7 +148,19 @@ export const DashboardPage = () => {
           {state.kind === 'ready' ? `Today · ${state.date}` : 'Today'}
         </p>
 
-        <div className="mt-4 flex items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 p-6">
+        <div className="relative mt-4 flex items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-400 via-brand-500 to-brand-600 p-6">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -left-2 -top-2 text-lg opacity-30 select-none"
+          >
+            ✨
+          </span>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -right-2 -bottom-2 text-lg opacity-30 select-none"
+          >
+            ✨
+          </span>
           <KcalRing consumed={totals.kcal} goal={goal} />
         </div>
 

@@ -33,7 +33,7 @@ const StatusBadge = ({
         ? 'bg-rose-100 text-rose-700'
         : tone === 'warn'
           ? 'bg-amber-100 text-amber-700'
-          : 'bg-sky-100 text-sky-700';
+          : 'bg-brand-100 text-brand-700';
   return (
     <span
       className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${toneClass}`}
@@ -74,10 +74,20 @@ const DebugBox = ({ debug }: { debug: LiffDebug }) => (
 );
 
 const StandaloneShell = ({ children }: { children: React.ReactNode }) => (
-  <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white">
-    <header className="px-6 pt-8 pb-4">
-      <h1 className="text-2xl font-bold text-brand-900">Tina Diet</h1>
-      <p className="text-sm text-slate-500">AI Nutrition Coach for Thailand</p>
+  <div className="min-h-screen bg-gradient-to-b from-brand-50 via-white to-brand-50/40">
+    <header className="relative overflow-hidden px-6 pt-8 pb-5">
+      <h1 className="bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-2xl font-bold text-transparent">
+        Tina Diet
+      </h1>
+      <p className="mt-0.5 text-xs font-medium text-slate-500">
+        Your AI Diet Coach for Thailand
+      </p>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-4 -top-4 text-3xl opacity-30 select-none"
+      >
+        🌸
+      </span>
     </header>
     <main className="px-6 pb-12">{children}</main>
   </div>

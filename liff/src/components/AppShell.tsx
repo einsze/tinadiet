@@ -8,70 +8,88 @@ type NavItem = {
 };
 
 const NAV_ITEMS: ReadonlyArray<NavItem> = [
-  { to: '/', label: 'หน้าแรก', icon: '🏠' },
-  { to: '/chat', label: 'ถาม Tina', icon: '💬' },
+  { to: '/', label: 'Home', icon: '🏠' },
+  { to: '/chat', label: 'Ask Tina', icon: '💬' },
   { to: '/premium', label: 'Premium', icon: '⭐' },
-  { to: '/profile', label: 'โปรไฟล์', icon: '👤' },
-  { to: '/support', label: 'ช่วยเหลือ', icon: '🆘' },
+  { to: '/profile', label: 'Profile', icon: '👤' },
+  { to: '/support', label: 'Support', icon: '🆘' },
 ];
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Dashboard',
-  '/chat': 'ถาม Tina',
+  '/chat': 'Ask Tina',
   '/premium': 'Premium',
-  '/profile': 'โปรไฟล์',
+  '/profile': 'Profile',
   '/settings': 'Settings',
   '/support': 'Support',
 };
 
 const RootHeader = ({ subtitle }: { subtitle?: string }) => (
-  <header className="px-6 pt-8 pb-4">
-    <Link to="/" className="block">
-      <h1 className="text-2xl font-bold text-brand-900">Tina Diet</h1>
+  <header className="relative overflow-hidden px-6 pt-8 pb-5">
+    <Link to="/" className="relative block">
+      <h1 className="bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-2xl font-bold text-transparent">
+        Tina Diet
+      </h1>
       {subtitle !== undefined ? (
-        <p className="text-sm text-slate-500">{subtitle}</p>
+        <p className="mt-0.5 text-xs font-medium text-slate-500">{subtitle}</p>
       ) : null}
     </Link>
+    <span
+      aria-hidden
+      className="pointer-events-none absolute -right-4 -top-4 text-3xl opacity-30 select-none"
+    >
+      🌸
+    </span>
   </header>
 );
 
 const SubpageHeader = ({ title }: { title: string }) => (
-  <header className="border-b border-slate-200 bg-white/95 px-6 py-3 backdrop-blur">
+  <header className="sticky top-0 z-10 border-b border-brand-100 bg-white/90 px-5 py-3 backdrop-blur-md">
     <div className="flex items-center justify-between gap-3">
       <Link
         to="/"
-        className="flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline"
+        className="flex items-center gap-1 text-sm font-medium text-brand-600 transition hover:text-brand-700"
       >
-        ← หน้าแรก
+        <span aria-hidden>←</span>
+        <span>Home</span>
       </Link>
-      <h1 className="text-sm font-semibold text-slate-900">{title}</h1>
-      <span className="w-16" />
+      <h1 className="text-sm font-semibold tracking-tight text-slate-900">
+        {title}
+      </h1>
+      <span aria-hidden className="w-14" />
     </div>
   </header>
 );
 
 const BottomNav = () => (
-  <nav className="sticky bottom-0 z-10 border-t border-slate-200 bg-white/95 backdrop-blur">
-    <ul className="mx-auto flex max-w-md items-stretch justify-around px-2 py-1.5">
+  <nav className="sticky bottom-0 z-10 border-t border-brand-100 bg-white/95 backdrop-blur-md">
+    <ul className="mx-auto flex max-w-md items-stretch justify-around px-1.5 py-1.5">
       {NAV_ITEMS.map((item) => (
         <li key={item.to} className="flex-1">
           <NavLink
             to={item.to}
             end={item.to === '/'}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] transition ${
+              `flex flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] transition ${
                 isActive
-                  ? 'text-brand-700'
-                  : 'text-slate-500 hover:text-slate-700'
+                  ? 'bg-brand-50 text-brand-700'
+                  : 'text-slate-500 hover:text-slate-800'
               }`
             }
           >
             {({ isActive }) => (
               <>
-                <span className={`text-xl leading-none ${isActive ? '' : 'opacity-70'}`}>
+                <span
+                  className={`text-lg leading-none transition-transform ${
+                    isActive ? 'scale-110' : 'opacity-70'
+                  }`}
+                  aria-hidden
+                >
                   {item.icon}
                 </span>
-                <span className="font-medium">{item.label}</span>
+                <span className={`font-semibold tracking-tight ${isActive ? '' : 'font-medium'}`}>
+                  {item.label}
+                </span>
               </>
             )}
           </NavLink>
@@ -92,13 +110,13 @@ export const AppShell = ({ children, showBottomNav = true }: Props) => {
   const title = PAGE_TITLES[location.pathname] ?? 'Tina Diet';
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-sky-50 to-white">
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-brand-50 via-white to-brand-50/40">
       {isRoot ? (
-        <RootHeader subtitle="AI Nutrition Coach for Thailand" />
+        <RootHeader subtitle="Your AI Diet Coach for Thailand" />
       ) : (
         <SubpageHeader title={title} />
       )}
-      <main className="flex-1 px-6 pb-24">{children}</main>
+      <main className="flex-1 px-5 pb-28 pt-2">{children}</main>
       {showBottomNav ? <BottomNav /> : null}
     </div>
   );
