@@ -174,6 +174,28 @@ export const DashboardPage = () => {
         </div>
       </section>
 
+      <Link
+        to="/chat"
+        className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-amber-50 via-rose-50 to-pink-50 p-4 shadow-sm transition hover:from-amber-100 hover:via-rose-100 hover:to-pink-100"
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-xl shadow-sm">
+          💬
+        </div>
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-slate-900">
+            ถาม Tina · นักโภชนาการ
+          </div>
+          <div className="mt-0.5 text-xs text-slate-600">
+            {isPremium
+              ? 'ปรึกษาเรื่องโภชนาการ Tina ตอบโดยอิงเป้าหมายของคุณ'
+              : 'ปลดล็อก Premium เพื่อใช้งาน'}
+          </div>
+        </div>
+        <div className="shrink-0 text-slate-400">
+          {isPremium ? '→' : '🔒'}
+        </div>
+      </Link>
+
       <section className="rounded-xl bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-900">Today&apos;s logs</h3>
