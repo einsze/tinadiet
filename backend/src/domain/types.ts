@@ -29,6 +29,40 @@ export type Subscription = {
   updated_at: string;
 };
 
+export type PaymentProvider = 'omise';
+export type PaymentMethod = 'promptpay' | 'truemoney';
+export type PaymentStatus =
+  | 'pending'
+  | 'successful'
+  | 'failed'
+  | 'expired'
+  | 'reversed';
+
+export type Payment = {
+  id: number;
+  user_id: number;
+  provider: PaymentProvider;
+  provider_charge_id: string;
+  provider_source_id: string | null;
+  method: PaymentMethod;
+  amount_satang: number;
+  currency: string;
+  status: PaymentStatus;
+  failure_code: string | null;
+  failure_message: string | null;
+  authorize_uri: string | null;
+  qr_image_uri: string | null;
+  expires_at: string | null;
+  completed_at: string | null;
+  grant_days: number;
+  grant_starts_at: string | null;
+  grant_ends_at: string | null;
+  last_event_type: string | null;
+  last_event_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Gender = 'male' | 'female' | 'other';
 export type ActivityLevel =
   | 'sedentary'
@@ -60,6 +94,7 @@ export type User = {
   plan: Plan;
   premium_expires_at: string | null;
   stripe_customer_id: string | null;
+  omise_customer_id: string | null;
   created_at: string;
   updated_at: string;
 };

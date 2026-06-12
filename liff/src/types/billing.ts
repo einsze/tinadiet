@@ -10,6 +10,24 @@ export type SubscriptionStatus =
   | 'unpaid'
   | 'paused';
 
+export type PaymentMethod = 'promptpay' | 'truemoney';
+export type PaymentStatus =
+  | 'pending'
+  | 'successful'
+  | 'failed'
+  | 'expired'
+  | 'reversed';
+
+export type LatestPayment = {
+  provider: 'omise';
+  method: PaymentMethod;
+  status: PaymentStatus;
+  amount_satang: number;
+  currency: string;
+  completed_at: string | null;
+  grant_ends_at: string | null;
+};
+
 export type BillingStatus = {
   plan: Plan;
   is_premium: boolean;
@@ -21,10 +39,25 @@ export type BillingStatus = {
     cancel_at_period_end: boolean;
     canceled_at: string | null;
   } | null;
+  latest_payment: LatestPayment | null;
   pricing: {
     currency: string;
     amount: number;
-    interval: string;
+    grant_days: number;
+    model: 'manual_renew';
   };
   stripe_configured: boolean;
+  omise_configured: boolean;
+};
+
+export type OmiseChargeResponse = {
+  charge_id: string;
+  status: PaymentStatus;
+  method: PaymentMethod;
+  amount_satang: number;
+  qr_image_uri: string | null;
+  authorize_uri: string | null;
+  expires_at: string | null;
+  completed_at?: string | null;
+  grant_ends_at?: string | null;
 };

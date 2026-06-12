@@ -7,6 +7,7 @@ import { dbFilePath } from './db/sqlite.js';
 import apiV1Router from './routes/api/index.js';
 import lineWebhookRouter from './routes/webhook/line.js';
 import stripeWebhookRouter from './routes/webhook/stripe.js';
+import omiseWebhookRouter from './routes/webhook/omise.js';
 import internalJobsRouter from './routes/internal/jobs.js';
 import { startCronJobs } from './jobs/index.js';
 
@@ -29,6 +30,7 @@ app.set('trust proxy', 1);
 
 app.use('/webhook', lineWebhookRouter);
 app.use('/webhooks', stripeWebhookRouter);
+app.use('/webhooks', omiseWebhookRouter);
 
 const allowedOriginPatterns: Array<string | RegExp> = [
   'https://app.tinadiet.com',

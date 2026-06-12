@@ -11,7 +11,7 @@ const USER_COLUMNS = `
   bmr_kcal, tdee_kcal, daily_calorie_goal,
   daily_protein_g, daily_carbs_g, daily_fat_g,
   locale, timezone,
-  plan, premium_expires_at, stripe_customer_id,
+  plan, premium_expires_at, stripe_customer_id, omise_customer_id,
   created_at, updated_at
 `;
 
@@ -25,6 +25,8 @@ type Stmts = {
   listProfileCompleted: Statement;
   setStripeCustomerId: Statement;
   findByStripeCustomerId: Statement;
+  setOmiseCustomerId: Statement;
+  findByOmiseCustomerId: Statement;
   applyPremium: Statement;
   revertToFree: Statement;
   listExpiredPremium: Statement;
@@ -85,6 +87,14 @@ const stmts = (): Stmts => {
     ),
     findByStripeCustomerId: db.prepare(
       `SELECT ${USER_COLUMNS} FROM users WHERE stripe_customer_id = ?`
+    ),
+    setOmiseCustomerId: db.prepare(
+      `UPDATE users
+       SET omise_customer_id = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    ),
+    findByOmiseCustomerId: db.prepare(
+      `SELECT ${USER_COLUMNS} FROM users WHERE omise_customer_id = ?`
     ),
     applyPremium: db.prepare(
       `UPDATE users
@@ -164,6 +174,16 @@ export const userRepository = {
   setStripeCustomerId: (userId: number, stripeCustomerId: string): User | undefined => {
     const s = stmts();
     s.setStripeCustomerId.run(stripeCustomerId, userId);
+    return s.findById.get(userId) as User | undefined;
+  },
+
+  findByOmiseCustomerId: (omiseCustomerId: string): User | undefined => {
+    return stmts().findByOmiseCustomerId.get(omiseCustomerId) as User | undefined;
+  },
+
+  setOmiseCustomerId: (userId: number, omiseCustomerId: string): User | undefined => {
+    const s = stmts();
+    s.setOmiseCustomerId.run(omiseCustomerId, userId);
     return s.findById.get(userId) as User | undefined;
   },
 

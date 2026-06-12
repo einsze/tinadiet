@@ -129,4 +129,43 @@ export const migrations: ReadonlyArray<Migration> = [
       CREATE INDEX idx_subscriptions_user ON subscriptions(user_id);
     `,
   },
+  {
+    name: '0007_omise_payments',
+    sql: `
+      ALTER TABLE users ADD COLUMN omise_customer_id TEXT;
+      CREATE INDEX idx_users_omise_customer ON users(omise_customer_id);
+
+      CREATE TABLE payments (
+        id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id                  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        provider                 TEXT NOT NULL CHECK(provider IN ('omise')),
+        provider_charge_id       TEXT NOT NULL,
+        provider_source_id       TEXT,
+        method                   TEXT NOT NULL CHECK(method IN ('promptpay','truemoney')),
+        amount_satang            INTEGER NOT NULL,
+        currency                 TEXT NOT NULL DEFAULT 'thb',
+        status                   TEXT NOT NULL CHECK(status IN
+                                   ('pending','successful','failed','expired','reversed')),
+        failure_code             TEXT,
+        failure_message          TEXT,
+        authorize_uri            TEXT,
+        qr_image_uri             TEXT,
+        expires_at               TEXT,
+        completed_at             TEXT,
+        grant_days               INTEGER NOT NULL DEFAULT 30,
+        grant_starts_at          TEXT,
+        grant_ends_at            TEXT,
+        last_event_type          TEXT,
+        last_event_at            TEXT,
+        created_at               TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at               TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE UNIQUE INDEX idx_payments_provider_charge
+        ON payments(provider, provider_charge_id);
+      CREATE INDEX idx_payments_user_created
+        ON payments(user_id, created_at DESC);
+      CREATE INDEX idx_payments_status_expires
+        ON payments(status, expires_at);
+    `,
+  },
 ];

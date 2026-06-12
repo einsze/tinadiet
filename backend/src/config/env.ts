@@ -54,6 +54,17 @@ export const env = {
     process.env.BILLING_SUCCESS_URL ?? 'https://app.tinadiet.com/?upgraded=1',
   BILLING_CANCEL_URL:
     process.env.BILLING_CANCEL_URL ?? 'https://app.tinadiet.com/?upgrade_canceled=1',
+
+  OMISE_PUBLIC_KEY: process.env.OMISE_PUBLIC_KEY ?? '',
+  OMISE_SECRET_KEY: process.env.OMISE_SECRET_KEY ?? '',
+  OMISE_API_BASE_URL: process.env.OMISE_API_BASE_URL ?? 'https://api.omise.co',
+  OMISE_API_VERSION: process.env.OMISE_API_VERSION ?? '2019-05-29',
+  OMISE_WEBHOOK_BASIC_USER: process.env.OMISE_WEBHOOK_BASIC_USER ?? '',
+  OMISE_WEBHOOK_BASIC_PASS: process.env.OMISE_WEBHOOK_BASIC_PASS ?? '',
+  PAYMENT_AMOUNT_THB: Number(process.env.PAYMENT_AMOUNT_THB ?? 150),
+  PAYMENT_GRANT_DAYS: Number(process.env.PAYMENT_GRANT_DAYS ?? 30),
+  PAYMENT_RETURN_URL:
+    process.env.PAYMENT_RETURN_URL ?? 'https://app.tinadiet.com/premium?omise_return=1',
 } as const;
 
 export type Env = typeof env;
