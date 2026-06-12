@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { env } from '../config/env.js';
 import { paymentsRepository } from '../repositories/payments.js';
 import { userRepository } from '../repositories/users.js';
@@ -459,11 +460,19 @@ export const handleOmiseEvent = async (
   };
 };
 
-export const parseOmiseWebhookEvent = (rawBody: unknown): OmiseEvent => {
-  if (typeof rawBody !== 'object' || rawBody === null) {
+export const parseOmiseWebhookEvent = (rawBodyText: string): OmiseEvent => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawBodyText);
+  } catch (err) {
+    throw new OmiseServiceError(
+      `Omise webhook body is not valid JSON: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+  if (typeof parsed !== 'object' || parsed === null) {
     throw new OmiseServiceError('Omise webhook body is not an object');
   }
-  const obj = rawBody as Partial<OmiseEvent>;
+  const obj = parsed as Partial<OmiseEvent>;
   if (
     obj.object !== 'event' ||
     typeof obj.id !== 'string' ||
@@ -477,25 +486,61 @@ export const parseOmiseWebhookEvent = (rawBody: unknown): OmiseEvent => {
   return obj as OmiseEvent;
 };
 
-export const verifyOmiseBasicAuth = (header: string | undefined): boolean => {
-  if (env.OMISE_WEBHOOK_BASIC_USER.length === 0) {
-    // Basic Auth not configured — accept all (dev/test mode). Production MUST set creds.
+/**
+ * Verify Omise webhook signature.
+ *
+ * Omise signs each webhook with HMAC-SHA256 over `${timestamp}.${rawBody}`,
+ * keyed by the base64-decoded webhook secret. During secret rotation, the
+ * `Omise-Signature` header contains TWO comma-separated hex signatures for
+ * up to 24 hours — accept either match.
+ *
+ * If OMISE_WEBHOOK_SECRET is empty, verification is bypassed (dev/test
+ * convenience). Production MUST set the secret.
+ */
+export const verifyOmiseSignature = (
+  rawBody: string,
+  signatureHeader: string | undefined,
+  timestampHeader: string | undefined
+): boolean => {
+  if (env.OMISE_WEBHOOK_SECRET.length === 0) {
     return true;
   }
-  if (typeof header !== 'string' || !header.startsWith('Basic ')) {
+  if (
+    typeof signatureHeader !== 'string' ||
+    signatureHeader.length === 0 ||
+    typeof timestampHeader !== 'string' ||
+    timestampHeader.length === 0
+  ) {
     return false;
   }
-  const expected = Buffer.from(
-    `${env.OMISE_WEBHOOK_BASIC_USER}:${env.OMISE_WEBHOOK_BASIC_PASS}`
-  ).toString('base64');
-  const received = header.slice('Basic '.length).trim();
-  if (received.length !== expected.length) return false;
-  // Constant-time compare to prevent timing attacks
-  let mismatch = 0;
-  for (let i = 0; i < expected.length; i++) {
-    mismatch |= expected.charCodeAt(i) ^ received.charCodeAt(i);
+
+  let secretBytes: Buffer;
+  try {
+    secretBytes = Buffer.from(env.OMISE_WEBHOOK_SECRET, 'base64');
+  } catch {
+    return false;
   }
-  return mismatch === 0;
+  if (secretBytes.length === 0) return false;
+
+  const expected = createHmac('sha256', secretBytes)
+    .update(`${timestampHeader}.${rawBody}`, 'utf8')
+    .digest();
+
+  // Header may contain comma-separated signatures during secret rotation
+  const candidates = signatureHeader.split(',');
+  for (const candidate of candidates) {
+    const trimmed = candidate.trim();
+    if (trimmed.length === 0) continue;
+    let candidateBytes: Buffer;
+    try {
+      candidateBytes = Buffer.from(trimmed, 'hex');
+    } catch {
+      continue;
+    }
+    if (candidateBytes.length !== expected.length) continue;
+    if (timingSafeEqual(candidateBytes, expected)) return true;
+  }
+  return false;
 };
 
 // ----- For polling endpoint: sync DB state with Omise -----

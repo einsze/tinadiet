@@ -3,7 +3,7 @@ import express from 'express';
 import {
   parseOmiseWebhookEvent,
   handleOmiseEvent,
-  verifyOmiseBasicAuth,
+  verifyOmiseSignature,
   OmiseServiceError,
 } from '../../services/omise.js';
 
@@ -11,27 +11,46 @@ const router = Router();
 
 router.post(
   '/omise',
-  express.json({ limit: '512kb' }),
+  express.raw({ type: 'application/json', limit: '512kb' }),
   async (req: Request, res: Response) => {
-    const auth = req.headers['authorization'];
-    if (!verifyOmiseBasicAuth(typeof auth === 'string' ? auth : undefined)) {
+    if (!Buffer.isBuffer(req.body)) {
+      console.error(
+        JSON.stringify({
+          level: 'error',
+          msg: 'webhook.omise.body_not_buffer',
+          body_type: typeof req.body,
+        })
+      );
+      res.status(400).json({ error: { code: 'BAD_BODY' } });
+      return;
+    }
+    const rawBody = req.body.toString('utf8');
+
+    const signatureHeader = req.headers['omise-signature'];
+    const timestampHeader = req.headers['omise-signature-timestamp'];
+    const sig = Array.isArray(signatureHeader)
+      ? signatureHeader[0]
+      : signatureHeader;
+    const ts = Array.isArray(timestampHeader)
+      ? timestampHeader[0]
+      : timestampHeader;
+
+    if (!verifyOmiseSignature(rawBody, sig, ts)) {
       console.warn(
         JSON.stringify({
           level: 'warn',
-          msg: 'webhook.omise.bad_auth',
-          has_header: typeof auth === 'string',
+          msg: 'webhook.omise.bad_signature',
+          has_sig: typeof sig === 'string' && sig.length > 0,
+          has_ts: typeof ts === 'string' && ts.length > 0,
         })
       );
-      res
-        .status(401)
-        .set('WWW-Authenticate', 'Basic realm="omise-webhook"')
-        .json({ error: { code: 'UNAUTHORIZED' } });
+      res.status(400).json({ error: { code: 'BAD_SIGNATURE' } });
       return;
     }
 
     let event;
     try {
-      event = parseOmiseWebhookEvent(req.body);
+      event = parseOmiseWebhookEvent(rawBody);
     } catch (err) {
       const isOmiseErr = err instanceof OmiseServiceError;
       console.warn(

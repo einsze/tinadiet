@@ -59,8 +59,7 @@ export const env = {
   OMISE_SECRET_KEY: process.env.OMISE_SECRET_KEY ?? '',
   OMISE_API_BASE_URL: process.env.OMISE_API_BASE_URL ?? 'https://api.omise.co',
   OMISE_API_VERSION: process.env.OMISE_API_VERSION ?? '2019-05-29',
-  OMISE_WEBHOOK_BASIC_USER: process.env.OMISE_WEBHOOK_BASIC_USER ?? '',
-  OMISE_WEBHOOK_BASIC_PASS: process.env.OMISE_WEBHOOK_BASIC_PASS ?? '',
+  OMISE_WEBHOOK_SECRET: process.env.OMISE_WEBHOOK_SECRET ?? '',
   PAYMENT_AMOUNT_THB: Number(process.env.PAYMENT_AMOUNT_THB ?? 150),
   PAYMENT_GRANT_DAYS: Number(process.env.PAYMENT_GRANT_DAYS ?? 30),
   PAYMENT_RETURN_URL:
