@@ -14,7 +14,7 @@ type State =
   | { kind: 'ready'; data: BillingStatus }
   | { kind: 'error'; message: string };
 
-const RENEW_WINDOW_DAYS = 7;
+const NEAR_EXPIRY_DAYS = 7;
 
 const formatDate = (iso: string | null): string => {
   if (iso === null) return '—';
@@ -29,10 +29,31 @@ const formatDate = (iso: string | null): string => {
   }
 };
 
+const formatDateFromMs = (ms: number): string =>
+  new Date(ms).toLocaleDateString('th-TH', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+
 const daysUntil = (iso: string | null): number | null => {
   if (iso === null) return null;
   const ms = new Date(iso).getTime() - Date.now();
   return Math.ceil(ms / (24 * 60 * 60 * 1000));
+};
+
+// Mirror of backend computeGrantWindow (services/omise.ts) — predict the new
+// premium_expires_at if user pays now. Grant stacks: starts from current
+// expiry if still active, otherwise from now.
+const computeProjectedExpiry = (
+  currentExpiryIso: string | null,
+  grantDays: number
+): number => {
+  const nowMs = Date.now();
+  const currentExpiryMs =
+    currentExpiryIso !== null ? new Date(currentExpiryIso).getTime() : 0;
+  const startMs = currentExpiryMs > nowMs ? currentExpiryMs : nowMs;
+  return startMs + grantDays * 24 * 60 * 60 * 1000;
 };
 
 const FeatureRow = ({ included, label }: { included: boolean; label: string }) => (
@@ -101,7 +122,25 @@ export const PremiumSection = () => {
 
   useEffect(() => () => stopTruemoneyPolling(), [stopTruemoneyPolling]);
 
-  const startCharge = async () => {
+  const startCharge = async (skipConfirm: boolean = false) => {
+    // Early-renewal safety confirm — for premium users far from expiry,
+    // double-tap protection. Always allow, just confirm.
+    if (!skipConfirm && state.kind === 'ready' && state.data.is_premium) {
+      const expires = daysUntil(state.data.premium_expires_at);
+      const projectedMs = computeProjectedExpiry(
+        state.data.premium_expires_at,
+        state.data.pricing.grant_days
+      );
+      if (expires !== null && expires > NEAR_EXPIRY_DAYS) {
+        const ok = window.confirm(
+          `คุณยังเหลือ ${expires} วัน\nต่ออายุตอนนี้จะทำให้วันหมดอายุใหม่เป็น ${formatDateFromMs(
+            projectedMs
+          )}\n\nดำเนินการต่อ?`
+        );
+        if (!ok) return;
+      }
+    }
+
     setActionPending(true);
     setActionError(null);
     stopTruemoneyPolling();
@@ -161,7 +200,11 @@ export const PremiumSection = () => {
   const { data } = state;
   const isPremium = data.is_premium;
   const expiresIn = daysUntil(data.premium_expires_at);
-  const canRenew = isPremium && expiresIn !== null && expiresIn <= RENEW_WINDOW_DAYS;
+  const nearExpiry = expiresIn !== null && expiresIn <= NEAR_EXPIRY_DAYS;
+  const projectedExpiryMs = computeProjectedExpiry(
+    data.premium_expires_at,
+    data.pricing.grant_days
+  );
 
   return (
     <>
@@ -210,35 +253,38 @@ export const PremiumSection = () => {
             </div>
           </div>
 
-          {canRenew ? (
-            <div className="mt-5 space-y-3">
+          <div className="mt-5 space-y-3">
+            {nearExpiry ? (
               <p className="text-center text-xs font-medium text-amber-700">
                 ใกล้หมดอายุแล้ว — ต่ออายุเลย?
               </p>
-              <PaymentMethodPicker
-                value={method}
-                onChange={setMethod}
-                disabled={actionPending}
-              />
-              <button
-                type="button"
-                onClick={() => void startCharge()}
-                disabled={actionPending || !data.omise_configured}
-                className="w-full rounded-lg bg-gradient-to-r from-amber-500 to-rose-500 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:from-amber-600 hover:to-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {actionPending
-                  ? 'กำลังเปิด…'
-                  : `ต่ออายุ ${data.pricing.amount} ฿ · ${data.pricing.grant_days} วัน`}
-              </button>
-              <p className="text-center text-[10px] text-slate-500">
-                วันที่ใหม่จะถูกบวกต่อจากวันหมดอายุปัจจุบัน
+            ) : (
+              <p className="text-center text-xs font-medium text-slate-600">
+                ต่ออายุล่วงหน้าได้ตลอดเวลา
               </p>
-            </div>
-          ) : (
-            <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-center text-xs text-slate-600">
-              เปิดให้ต่ออายุได้ {RENEW_WINDOW_DAYS} วันก่อนหมดอายุ
+            )}
+            <PaymentMethodPicker
+              value={method}
+              onChange={setMethod}
+              disabled={actionPending}
+            />
+            <button
+              type="button"
+              onClick={() => void startCharge()}
+              disabled={actionPending || !data.omise_configured}
+              className="w-full rounded-lg bg-gradient-to-r from-amber-500 to-rose-500 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:from-amber-600 hover:to-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {actionPending
+                ? 'กำลังเปิด…'
+                : `ต่ออายุ ${data.pricing.amount} ฿ · +${data.pricing.grant_days} วัน`}
+            </button>
+            <p className="rounded-lg bg-white/60 px-3 py-2 text-center text-[11px] text-slate-600">
+              วันหมดอายุใหม่จะเป็น{' '}
+              <span className="font-semibold text-slate-900">
+                {formatDateFromMs(projectedExpiryMs)}
+              </span>
             </p>
-          )}
+          </div>
 
           {actionError !== null ? (
             <p className="mt-2 text-xs text-rose-700">{actionError}</p>
