@@ -1,0 +1,61 @@
+---
+title: Tina Diet Docs
+description: Developer documentation for Tina Diet — Thai-first AI nutrition coach delivered via LINE.
+template: splash
+hero:
+  tagline: AI nutrition coach for Thailand, built on LINE LIFF + Express + Cloudflare.
+  image:
+    file: ../../assets/mascot.png
+  actions:
+    - text: Get Started
+      link: /documentation/getting-started/prerequisites/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/einsze/tinadiet
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## What is this?
+
+Developer documentation for **Tina Diet** at `tinadiet.com`. Covers how the
+system is built, how to set up local development, how to deploy, and how to
+operate it in production.
+
+End-user help lives inside the LIFF app at `app.tinadiet.com/support` — this
+site is for engineering.
+
+## Find your way around
+
+<CardGrid stagger>
+  <Card title="Architecture" icon="puzzle">
+    System diagram, data model, and invariants you must not break. [Read →](/documentation/architecture/overview/)
+  </Card>
+  <Card title="Local setup" icon="laptop">
+    Clone, install, run backend + LIFF locally with cloudflared tunnel. [Read →](/documentation/getting-started/local-setup/)
+  </Card>
+  <Card title="Backend" icon="seti:typescript">
+    Express + better-sqlite3 + LINE SDK + OpenAI + Omise. Lazy stmts pattern. [Read →](/documentation/backend/stack/)
+  </Card>
+  <Card title="LIFF" icon="seti:react">
+    Vite + React + Tailwind + multi-page routing in LINE's webview. [Read →](/documentation/liff/stack/)
+  </Card>
+  <Card title="Payments" icon="approve-check">
+    Omise PromptPay + TrueMoney manual-renew model, HMAC signature verify. [Read →](/documentation/payments/overview/)
+  </Card>
+  <Card title="Operations" icon="setting">
+    DB queries, manual grants, troubleshooting, monitoring. [Read →](/documentation/ops/db-queries/)
+  </Card>
+</CardGrid>
+
+## Project at a glance
+
+- **Brand**: Tina Diet — Thai-first nutrition coach with a friendly female persona (ค่ะ register)
+- **Surface**: LINE chat bot (Messaging API) + LIFF SPA (LINE-embedded React app)
+- **Backend**: Node 22 / Express / TypeScript ESM / better-sqlite3 on a Railway volume
+- **AI**: OpenAI gpt-4o (vision) + gpt-4o-mini (text) for food parsing, coaching, consultation
+- **Payments**: Omise PromptPay + TrueMoney, 150 THB / 30 days, manual renewal
+- **Hosting**: Railway (backend) · Cloudflare Workers (LIFF) · Cloudflare Pages (these docs)

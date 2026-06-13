@@ -1,0 +1,14 @@
+# Astro build
+dist/
+.astro/
+
+# Node
+node_modules/
+
+# Env
+.env
+.env.production
+
+# Editor
+.vscode/
+.DS_Store

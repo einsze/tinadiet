@@ -1,0 +1,40 @@
+/* Tina Diet — rose-pink palette mirroring liff/tailwind.config.js */
+:root {
+  --sl-color-accent-low: #ffe4ec;
+  --sl-color-accent: #ec4571;
+  --sl-color-accent-high: #be3252;
+
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #fafafa;
+  --sl-color-gray-2: #f4f4f5;
+  --sl-color-gray-3: #d4d4d8;
+  --sl-color-gray-4: #71717a;
+  --sl-color-gray-5: #52525b;
+  --sl-color-gray-6: #3f3f46;
+  --sl-color-black: #18181b;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #ffe4ec;
+  --sl-color-accent: #ec4571;
+  --sl-color-accent-high: #be3252;
+}
+
+:root[data-theme='dark'] {
+  --sl-color-accent-low: #4a1228;
+  --sl-color-accent: #ec4571;
+  --sl-color-accent-high: #f178a0;
+}
+
+/* Subtle rose tint on the search highlight + sidebar hover */
+[data-theme='light'] .sidebar-pane {
+  background-color: var(--sl-color-gray-1);
+}
+
+/* Brand gradient on the docs title */
+.site-title {
+  background: linear-gradient(135deg, #ec4571 0%, #be3252 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

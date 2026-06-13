@@ -1,0 +1,278 @@
+---
+const lineAddUrl = 'https://line.me/R/ti/p/@913civqx';
+const docsUrl = '/documentation/introduction/';
+const githubUrl = 'https://github.com/einsze/tinadiet';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#ec4571" />
+    <title>Tina Diet — Your AI Diet Coach for Thailand</title>
+    <meta
+      name="description"
+      content="Tina Diet is an AI-powered nutrition coach for Thai LINE users. Log food via chat or photo, track macros, get personalized coaching."
+    />
+    <meta property="og:title" content="Tina Diet — Your AI Diet Coach" />
+    <meta
+      property="og:description"
+      content="AI-powered nutrition coach for Thailand, delivered via LINE."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tinadiet.com" />
+  </head>
+  <body>
+    <main>
+      <div class="bg-decoration" aria-hidden="true">
+        <span class="emoji emoji-1">✨</span>
+        <span class="emoji emoji-2">💖</span>
+        <span class="emoji emoji-3">🌸</span>
+        <span class="emoji emoji-4">✨</span>
+      </div>
+
+      <header class="hero">
+        <div class="mascot-wrap">
+          <img
+            src="/mascot.png"
+            alt="Tina mascot"
+            width="160"
+            height="160"
+            class="mascot"
+          />
+        </div>
+        <h1 class="title">
+          <span class="brand-gradient">Tina Diet</span>
+        </h1>
+        <p class="tagline">Your AI Diet Coach for Thailand</p>
+        <p class="subtitle">
+          เพื่อนคู่ใจด้านโภชนาการของคุณ ผ่าน LINE
+          <br />
+          AI-powered food logging, macro tracking & nutrition coaching.
+        </p>
+
+        <div class="cta-grid">
+          <a href={lineAddUrl} class="cta cta-primary" target="_blank" rel="noopener">
+            <span class="cta-icon">💬</span>
+            <span class="cta-text">
+              <span class="cta-label">Open in LINE</span>
+              <span class="cta-hint">Add @913civqx to start</span>
+            </span>
+          </a>
+          <a href={docsUrl} class="cta cta-secondary">
+            <span class="cta-icon">📖</span>
+            <span class="cta-text">
+              <span class="cta-label">Documentation</span>
+              <span class="cta-hint">For developers</span>
+            </span>
+          </a>
+        </div>
+      </header>
+
+      <footer class="footer">
+        <a href={githubUrl} target="_blank" rel="noopener" class="footer-link">
+          GitHub
+        </a>
+        <span class="dot">·</span>
+        <a href="https://app.tinadiet.com/privacy" target="_blank" rel="noopener" class="footer-link">
+          Privacy
+        </a>
+        <span class="dot">·</span>
+        <a href="https://app.tinadiet.com/terms" target="_blank" rel="noopener" class="footer-link">
+          Terms
+        </a>
+        <p class="copyright">© {new Date().getFullYear()} Tina Diet</p>
+      </footer>
+    </main>
+
+    <style>
+      :root {
+        --brand-500: #ec4571;
+        --brand-600: #be3252;
+        --brand-50: #ffe4ec;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+          Ubuntu, Cantarell, sans-serif;
+        background:
+          linear-gradient(
+            135deg,
+            #fff5f7 0%,
+            #ffffff 50%,
+            #fff5f7 100%
+          );
+        color: #18181b;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      main {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 1.5rem;
+      }
+
+      .bg-decoration {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .emoji {
+        position: absolute;
+        font-size: 2rem;
+        opacity: 0.4;
+        animation: float 6s ease-in-out infinite;
+      }
+      .emoji-1 { top: 10%; left: 8%; animation-delay: 0s; }
+      .emoji-2 { top: 18%; right: 12%; animation-delay: 1.5s; }
+      .emoji-3 { bottom: 22%; left: 12%; animation-delay: 3s; }
+      .emoji-4 { bottom: 14%; right: 8%; animation-delay: 4.5s; }
+      @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-15px); }
+      }
+
+      .hero {
+        text-align: center;
+        max-width: 32rem;
+        z-index: 1;
+      }
+
+      .mascot-wrap {
+        display: inline-flex;
+        padding: 0.5rem;
+        border-radius: 50%;
+        background: white;
+        box-shadow: 0 25px 50px -12px rgb(236 69 113 / 0.15);
+        margin-bottom: 1.5rem;
+      }
+      .mascot {
+        border-radius: 50%;
+        animation: wiggle 2.6s ease-in-out infinite;
+        transform-origin: center bottom;
+      }
+      @keyframes wiggle {
+        0%, 100% { transform: rotate(-2.5deg) translateY(0); }
+        50% { transform: rotate(2.5deg) translateY(-6px); }
+      }
+
+      .title {
+        font-size: clamp(2.5rem, 8vw, 4rem);
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+      }
+      .brand-gradient {
+        background: linear-gradient(
+          135deg,
+          var(--brand-500) 0%,
+          var(--brand-600) 100%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .tagline {
+        font-size: 1.125rem;
+        color: #52525b;
+        font-weight: 600;
+        margin-bottom: 1rem;
+      }
+      .subtitle {
+        font-size: 0.95rem;
+        color: #71717a;
+        line-height: 1.6;
+        margin-bottom: 2.5rem;
+      }
+
+      .cta-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        max-width: 26rem;
+        margin: 0 auto;
+      }
+      @media (min-width: 540px) {
+        .cta-grid { grid-template-columns: 1fr 1fr; }
+      }
+
+      .cta {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 1.25rem;
+        border-radius: 0.875rem;
+        text-decoration: none;
+        transition: all 200ms;
+        text-align: left;
+      }
+      .cta-icon { font-size: 1.5rem; }
+      .cta-text { display: flex; flex-direction: column; }
+      .cta-label { font-weight: 700; font-size: 0.95rem; }
+      .cta-hint { font-size: 0.75rem; opacity: 0.8; }
+
+      .cta-primary {
+        background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
+        color: white;
+        box-shadow: 0 10px 25px -10px rgb(236 69 113 / 0.5);
+      }
+      .cta-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 30px -10px rgb(236 69 113 / 0.6);
+      }
+      .cta-secondary {
+        background: white;
+        color: #18181b;
+        border: 1.5px solid #e4e4e7;
+      }
+      .cta-secondary:hover {
+        border-color: var(--brand-500);
+        color: var(--brand-600);
+      }
+
+      .footer {
+        position: absolute;
+        bottom: 1.5rem;
+        font-size: 0.8rem;
+        color: #71717a;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .footer-link {
+        color: #52525b;
+        text-decoration: none;
+      }
+      .footer-link:hover {
+        color: var(--brand-600);
+      }
+      .dot { opacity: 0.4; }
+      .copyright {
+        flex-basis: 100%;
+        text-align: center;
+        font-size: 0.7rem;
+        color: #a1a1aa;
+        margin-top: 0.25rem;
+      }
+    </style>
+  </body>
+</html>
