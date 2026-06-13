@@ -345,7 +345,7 @@ Each page lists target content as bullets. Word count estimate: ~300-800 per pag
 
 **`cloudflare-pages-docs.md`**:
 - Pages project setup
-- Build cmd: `cd projects/docs && npm run build`
+- Build cmd: `cd docs && npm run build`
 - Output: `dist`
 - Custom domain tinadiet.com apex setup
 
@@ -467,8 +467,8 @@ Skip for initial ship, add iteratively: ADRs, per-service deep dives, troublesho
 - [ ] Push to main, verify Cloudflare auto-build picks up `projects/docs/`
 - [ ] Cloudflare Pages project setup:
   - Name: `tinadiet-docs`
-  - Build cmd: `cd projects/docs && npm install && npm run build`
-  - Output: `projects/docs/dist`
+  - Build cmd: `cd docs && npm install && npm run build`
+  - Output: `docs/dist`
   - Env vars: `NODE_VERSION=22`
 - [ ] First deploy → verify `tinadiet-docs.pages.dev` works
 - [ ] DNS: Cloudflare → tinadiet.com → custom domain on Pages project

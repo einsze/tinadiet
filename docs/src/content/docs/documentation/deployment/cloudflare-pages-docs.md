@@ -20,15 +20,15 @@ Starlight** and deployed to **Cloudflare Pages** at `tinadiet.com`.
 In Cloudflare Pages dashboard → tinadiet-docs → Settings → Builds & deployments:
 
 - **Production branch**: `main`
-- **Build command**: `cd projects/docs && npm install && npm run build`
-- **Build output directory**: `projects/docs/dist`
+- **Build command**: `cd docs && npm install && npm run build`
+- **Build output directory**: `docs/dist`
 - **Root directory**: `/` (project root, build cd's into projects/docs)
 - **Environment variables**: `NODE_VERSION=22`
 
 ## Local development
 
 ```bash
-cd projects/docs
+cd docs
 npm install         # first time
 npm run dev         # Astro dev server on http://localhost:4321
 ```

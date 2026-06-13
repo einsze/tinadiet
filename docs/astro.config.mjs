@@ -30,21 +30,39 @@ export default defineConfig({
       lastUpdated: true,
       pagination: true,
       sidebar: [
-        { label: 'Introduction', slug: 'introduction' },
+        { label: 'Introduction', slug: 'documentation/introduction' },
         {
           label: 'Getting Started',
-          autogenerate: { directory: 'getting-started' },
+          autogenerate: { directory: 'documentation/getting-started' },
         },
         {
           label: 'Architecture',
-          autogenerate: { directory: 'architecture' },
+          autogenerate: { directory: 'documentation/architecture' },
         },
-        { label: 'Backend', autogenerate: { directory: 'backend' } },
-        { label: 'LIFF', autogenerate: { directory: 'liff' } },
-        { label: 'Payments', autogenerate: { directory: 'payments' } },
-        { label: 'Deployment', autogenerate: { directory: 'deployment' } },
-        { label: 'Operations', autogenerate: { directory: 'ops' } },
-        { label: 'Reference', autogenerate: { directory: 'reference' } },
+        {
+          label: 'Backend',
+          autogenerate: { directory: 'documentation/backend' },
+        },
+        {
+          label: 'LIFF',
+          autogenerate: { directory: 'documentation/liff' },
+        },
+        {
+          label: 'Payments',
+          autogenerate: { directory: 'documentation/payments' },
+        },
+        {
+          label: 'Deployment',
+          autogenerate: { directory: 'documentation/deployment' },
+        },
+        {
+          label: 'Operations',
+          autogenerate: { directory: 'documentation/ops' },
+        },
+        {
+          label: 'Reference',
+          autogenerate: { directory: 'documentation/reference' },
+        },
       ],
       head: [
         {
