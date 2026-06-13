@@ -10,7 +10,7 @@ The backend runs on **Railway** in their Singapore region on the Hobby plan
 
 ## Service config
 
-- **Project ID**: `b32eec7d-074c-4942-8f18-4108eee632b7`
+- **Project ID**: kept private (see SECRETS file)
 - **Service name**: `backend`
 - **Source**: GitHub `einsze/tinadiet` repo, builds from `projects/backend/`
 - **Region**: Asia-Southeast (Singapore)
@@ -19,7 +19,7 @@ The backend runs on **Railway** in their Singapore region on the Hobby plan
 - **Start command**: default from `package.json` `start` script (`node dist/index.js`)
 - **Port**: 3000 (Railway injects `$PORT`)
 - **Private internal name**: `backend.railway.internal`
-- **Public URL**: `https://backend-production-fed16.up.railway.app` (fallback)
+- **Public URL**: auto-generated `*.up.railway.app` (fallback, kept private)
 - **Custom domain**: `api.tinadiet.com` (Cloudflare proxied)
 
 ## Volume

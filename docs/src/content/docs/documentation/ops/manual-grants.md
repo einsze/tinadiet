@@ -35,7 +35,7 @@ Replace `<LINE_ID>` with the user's `line_user_id` (starts with `U`,
 ~32 chars). Find it via:
 
 ```bash
-node -e 'const db=require("better-sqlite3")("/data/app.db");console.log(db.prepare("SELECT id, line_user_id, display_name FROM users WHERE display_name = ?").get("Acare🧁"));'
+node -e 'const db=require("better-sqlite3")("/data/app.db");console.log(db.prepare("SELECT id, line_user_id, display_name FROM users WHERE display_name = ?").get("<DISPLAY_NAME>"));'
 ```
 
 ## How to verify
@@ -50,7 +50,7 @@ Expected output:
 ```json
 {
   "id": 1,
-  "display_name": "Acare🧁",
+  "display_name": "<example>",
   "plan": "premium",
   "premium_expires_at": "2026-07-13 17:28:00"
 }
@@ -106,14 +106,14 @@ use a far-future expiry:
 node -e 'const db=require("better-sqlite3")("/data/app.db");const u=db.prepare("UPDATE users SET plan=\"premium\", premium_expires_at=\"2099-12-31\", updated_at=datetime(\"now\") WHERE line_user_id = ?").run("<LINE_ID>");console.log("Rows updated:", u.changes);'
 ```
 
-## Real-world examples
+## Common patterns
 
-### Acare🧁 (beta tester)
-Granted premium until `2026-07-11` via SQL on Railway. After that date,
-the nightly cron will revert to free. To extend, run the stacking SQL
-above.
+### Beta tester
+Granted premium for a fixed period via SQL on Railway. After the expiry
+date, the nightly cron will revert to free. To extend, run the stacking
+SQL above.
 
-### ein.carvi (developer, dev account)
+### Developer test account
 Stacked multiple TEST charges to push expiry far into the future for
 e2e testing. Will revert via cron once stops paying — this is
 intentional, no cleanup needed.

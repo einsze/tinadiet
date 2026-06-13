@@ -75,9 +75,9 @@ node -e 'const db=require("better-sqlite3")("/data/app.db");const rows=db.prepar
 
 ### 1.6 Find user by line_user_id
 
-Replace `U5116ebb4e2effcf7b3c5d4d2332b5f71` with target:
+Replace `Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` with target:
 ```bash
-node -e 'const db=require("better-sqlite3")("/data/app.db");const row=db.prepare("SELECT * FROM users WHERE line_user_id = ?").get("U5116ebb4e2effcf7b3c5d4d2332b5f71");console.log(JSON.stringify(row, null, 2));'
+node -e 'const db=require("better-sqlite3")("/data/app.db");const row=db.prepare("SELECT * FROM users WHERE line_user_id = ?").get("Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");console.log(JSON.stringify(row, null, 2));'
 ```
 
 ### 1.7 New signups breakdown (last 30 days, daily)

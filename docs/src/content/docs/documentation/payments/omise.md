@@ -80,7 +80,7 @@ Internally calls `POST https://api.omise.co/charges` with:
   "source": { "type": "promptpay" },
   "metadata": {
     "tinadiet_user_id": "2",
-    "line_user_id": "Ue4e9d13c..."
+    "line_user_id": "Uxxxxxxxx..."
   }
 }
 ```
@@ -94,7 +94,7 @@ Internally calls `POST https://api.omise.co/charges` with:
   "return_uri": "https://app.tinadiet.com/premium?omise_return=1",
   "metadata": {
     "tinadiet_user_id": "2",
-    "line_user_id": "Ue4e9d13c..."
+    "line_user_id": "Uxxxxxxxx..."
   }
 }
 ```

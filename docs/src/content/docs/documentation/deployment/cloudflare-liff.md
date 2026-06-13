@@ -12,10 +12,10 @@ Workers' edge compute.
 ## Worker config
 
 - **Worker name**: `tinadiet-liff`
-- **Workers subdomain**: `ein-carvi.workers.dev` (default)
+- **Workers subdomain**: `*.workers.dev` (auto-generated default, kept private)
 - **Custom domain**: `app.tinadiet.com`
 - **Source**: GitHub `einsze/tinadiet`, builds from `projects/liff/`
-- **Cloudflare account**: `ein.carvi@gmail.com`
+- **Cloudflare account**: maintained by project owner
 
 ## wrangler.toml
 
