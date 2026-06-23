@@ -1,6 +1,11 @@
 name = "tinadiet-admin"
 compatibility_date = "2026-06-01"
 
+# Disable workers.dev URL + preview URLs so admin dashboard is reachable
+# only via the custom domain admin.tinadiet.com (security hardening).
+workers_dev = false
+preview_urls = false
+
 [assets]
 directory = "./dist"
 not_found_handling = "single-page-application"
