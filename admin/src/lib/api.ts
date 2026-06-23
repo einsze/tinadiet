@@ -17,70 +17,55 @@ const isApiErrorBody = (
   );
 };
 
-let _sessionToken: string | null = null;
+const TOKEN_KEY = 'tinadiet_admin_token';
 
-export const setSessionToken = (token: string | null): void => {
-  _sessionToken = token;
+let _adminToken: string | null =
+  typeof localStorage !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+let _onUnauthorized: (() => void) | null = null;
+
+export const setAdminToken = (token: string | null): void => {
+  _adminToken = token;
+  if (typeof localStorage !== 'undefined') {
+    if (token === null) {
+      localStorage.removeItem(TOKEN_KEY);
+    } else {
+      localStorage.setItem(TOKEN_KEY, token);
+    }
+  }
 };
 
-export const getSessionToken = (): string | null => _sessionToken;
+export const getAdminToken = (): string | null => _adminToken;
+
+export const setOnUnauthorized = (fn: (() => void) | null): void => {
+  _onUnauthorized = fn;
+};
 
 const buildHeaders = (extra?: HeadersInit): HeadersInit => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(extra as Record<string, string> | undefined),
   };
-  if (_sessionToken !== null) {
-    headers['Authorization'] = `Bearer ${_sessionToken}`;
+  if (_adminToken !== null) {
+    headers['Authorization'] = `Bearer ${_adminToken}`;
   }
   return headers;
 };
 
-const request = async <T>(
-  path: string,
-  init?: RequestInit
-): Promise<T> => {
+const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const res = await fetch(`${env.API_BASE_URL}${path}`, {
     ...init,
     headers: buildHeaders(init?.headers),
   });
 
-  if (res.status === 204) {
-    return undefined as T;
+  if (res.status === 401 && _onUnauthorized !== null) {
+    _onUnauthorized();
   }
 
-  const text = await res.text();
-  const body: unknown = text.length > 0 ? JSON.parse(text) : null;
-
-  if (!res.ok) {
-    const err: ApiError = {
-      status: res.status,
-      code: isApiErrorBody(body) ? body.error.code : 'UNKNOWN',
-      message: isApiErrorBody(body) ? body.error.message : res.statusText,
-    };
-    throw err;
-  }
-
-  return body as T;
-};
-
-const requestMultipart = async <T>(
-  path: string,
-  formData: FormData
-): Promise<T> => {
-  const headers: Record<string, string> = {};
-  // Note: do NOT set Content-Type — browser sets multipart boundary itself
-  if (_sessionToken !== null) {
-    headers['Authorization'] = `Bearer ${_sessionToken}`;
-  }
-  const res = await fetch(`${env.API_BASE_URL}${path}`, {
-    method: 'POST',
-    headers,
-    body: formData,
-  });
   if (res.status === 204) return undefined as T;
+
   const text = await res.text();
   const body: unknown = text.length > 0 ? JSON.parse(text) : null;
+
   if (!res.ok) {
     const err: ApiError = {
       status: res.status,
@@ -89,6 +74,7 @@ const requestMultipart = async <T>(
     };
     throw err;
   }
+
   return body as T;
 };
 
@@ -99,12 +85,17 @@ export const api = {
       method: 'POST',
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
-  patch: <T>(path: string, body?: unknown) =>
+  put: <T>(path: string, body?: unknown) =>
     request<T>(path, {
-      method: 'PATCH',
+      method: 'PUT',
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
-  postMultipart: <T>(path: string, formData: FormData) =>
-    requestMultipart<T>(path, formData),
 };
+
+// Direct fetch URL for binary endpoints (e.g. slip image)
+export const buildAuthedUrl = (path: string): string =>
+  `${env.API_BASE_URL}${path}`;
+
+export const buildAuthHeader = (): Record<string, string> =>
+  _adminToken !== null ? { Authorization: `Bearer ${_adminToken}` } : {};

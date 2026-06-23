@@ -64,6 +64,14 @@ export const env = {
   PAYMENT_GRANT_DAYS: Number(process.env.PAYMENT_GRANT_DAYS ?? 30),
   PAYMENT_RETURN_URL:
     process.env.PAYMENT_RETURN_URL ?? 'https://app.tinadiet.com/premium?omise_return=1',
+
+  // --- Admin dashboard + manual payment / credit system (Sprint 6 M4) ---
+  ADMIN_JWT_SECRET: (process.env.ADMIN_JWT_SECRET ?? '').length > 0
+    ? (process.env.ADMIN_JWT_SECRET ?? '')
+    : (process.env.SESSION_JWT_SECRET ?? ''),
+  ADMIN_BASE_URL: process.env.ADMIN_BASE_URL ?? 'https://admin.tinadiet.com',
+  SLIP_STORAGE_DIR: process.env.SLIP_STORAGE_DIR ?? './data/slips',
+  SLIP_MAX_BYTES: Number(process.env.SLIP_MAX_BYTES ?? 5 * 1024 * 1024),
 } as const;
 
 export type Env = typeof env;

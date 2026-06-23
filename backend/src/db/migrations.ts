@@ -168,4 +168,121 @@ export const migrations: ReadonlyArray<Migration> = [
         ON payments(status, expires_at);
     `,
   },
+  {
+    name: '0008_credit_system',
+    sql: `
+      -- Credit balance + abuse fields on users
+      ALTER TABLE users ADD COLUMN credit_balance_satang INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE users ADD COLUMN abuse_warning_count   INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE users ADD COLUMN is_blocked            INTEGER NOT NULL DEFAULT 0;
+
+      -- Admin users (superadmin + operator)
+      CREATE TABLE admin_users (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        email               TEXT    NOT NULL UNIQUE,
+        password_hash       TEXT    NOT NULL,
+        display_name        TEXT    NOT NULL,
+        role                TEXT    NOT NULL CHECK(role IN ('superadmin','operator')),
+        is_active           INTEGER NOT NULL DEFAULT 1,
+        last_login_at       TEXT,
+        created_by_admin_id INTEGER REFERENCES admin_users(id),
+        created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+        updated_at          TEXT    NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX idx_admin_users_email ON admin_users(email);
+
+      -- Manual top-up payments (user uploads slip, operator reviews)
+      CREATE TABLE manual_payments (
+        id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id                   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        requested_amount_satang   INTEGER NOT NULL,
+        actual_amount_satang      INTEGER,
+        slip_file_path            TEXT,
+        slip_mime_type            TEXT,
+        slip_size_bytes           INTEGER,
+        status                    TEXT    NOT NULL DEFAULT 'awaiting_slip'
+                                    CHECK(status IN
+                                      ('awaiting_slip','pending','approved','rejected','flagged_review','revoked')),
+        reviewed_by_admin_id      INTEGER REFERENCES admin_users(id),
+        reviewed_at               TEXT,
+        rejection_reason          TEXT,
+        admin_notes               TEXT,
+        flag_user_as_abuse        INTEGER NOT NULL DEFAULT 0,
+        credit_granted_satang     INTEGER,
+        revoked_by_admin_id       INTEGER REFERENCES admin_users(id),
+        revoked_at                TEXT,
+        revoke_reason             TEXT,
+        created_at                TEXT    NOT NULL DEFAULT (datetime('now')),
+        updated_at                TEXT    NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX idx_manual_payments_user_created ON manual_payments(user_id, created_at DESC);
+      CREATE INDEX idx_manual_payments_status_created ON manual_payments(status, created_at ASC);
+
+      -- Credit ledger (immutable audit log per credit transaction)
+      CREATE TABLE credit_ledger (
+        id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id                   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        amount_satang             INTEGER NOT NULL,
+        balance_after_satang      INTEGER NOT NULL,
+        source_type               TEXT    NOT NULL CHECK(source_type IN
+                                    ('manual_topup','omise_topup','admin_grant',
+                                     'redeem_premium','revoke_topup','revoke_redeem')),
+        source_ref_id             INTEGER,
+        admin_user_id             INTEGER REFERENCES admin_users(id),
+        note                      TEXT,
+        created_at                TEXT    NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX idx_credit_ledger_user_created ON credit_ledger(user_id, created_at DESC);
+      CREATE INDEX idx_credit_ledger_source ON credit_ledger(source_type, source_ref_id);
+
+      -- User flags (audit trail for abuse warnings + manual blocks)
+      CREATE TABLE user_flags (
+        id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id                   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        flag_type                 TEXT    NOT NULL CHECK(flag_type IN
+                                    ('abuse_warning','manual_block')),
+        reason                    TEXT,
+        related_payment_id        INTEGER REFERENCES manual_payments(id),
+        flagged_by_admin_id       INTEGER NOT NULL REFERENCES admin_users(id),
+        flagged_at                TEXT    NOT NULL DEFAULT (datetime('now')),
+        cleared_by_admin_id       INTEGER REFERENCES admin_users(id),
+        cleared_at                TEXT,
+        clear_reason              TEXT
+      );
+      CREATE INDEX idx_user_flags_user ON user_flags(user_id, flagged_at DESC);
+
+      -- System settings (key-value singleton config)
+      CREATE TABLE system_settings (
+        key                       TEXT    PRIMARY KEY,
+        value                     TEXT    NOT NULL,
+        updated_by_admin_id       INTEGER REFERENCES admin_users(id),
+        updated_at                TEXT    NOT NULL DEFAULT (datetime('now'))
+      );
+
+      -- Seed default settings
+      INSERT INTO system_settings (key, value) VALUES
+        ('promptpay_id',                ''),
+        ('promptpay_id_type',           'mobile'),
+        ('promptpay_receiver_name',     ''),
+        ('price_1mo_credit',            '150'),
+        ('price_3mo_credit',            '450'),
+        ('price_6mo_credit',            '900'),
+        ('price_12mo_credit',           '1800'),
+        ('high_value_threshold_satang', '500000'),
+        ('topup_min_satang',            '5000'),
+        ('topup_max_satang',            '500000');
+
+      -- Seed 2 superadmin accounts (bcrypt hashes pre-computed for the agreed
+      -- passwords. Passwords can be rotated after login via /account page.)
+      INSERT INTO admin_users (email, password_hash, display_name, role) VALUES
+        ('send@carvi.click',
+         '$2b$10$VEJMY54ug1SuCvbowwLmeusxlGBChdQS2xgQfbwQmIvwK0rD5geYW',
+         'Owner (send@carvi.click)',
+         'superadmin'),
+        ('sellerprn25@gmail.com',
+         '$2b$10$uw8/WHifqtz6LZ6p5NcCLu2oahEPee5xqD8CH6HoFtWU6KkWmEmyi',
+         'Owner (sellerprn25@gmail.com)',
+         'superadmin');
+    `,
+  },
 ];

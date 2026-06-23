@@ -6,6 +6,10 @@ import weightLogsRouter from './weight_logs.js';
 import chatRouter from './chat.js';
 import billingRouter from './billing.js';
 import accountRouter from './account.js';
+import walletRouter from './wallet.js';
+import topupRouter from './topup.js';
+import premiumRouter from './premium.js';
+import adminRouter from './admin/index.js';
 
 const router = Router();
 
@@ -16,5 +20,9 @@ router.use('/weight-logs', weightLogsRouter);
 router.use('/chat', chatRouter);
 router.use('/billing', billingRouter);
 router.use('/account', accountRouter);
+router.use('/wallet', walletRouter);
+router.use('/topup', topupRouter);
+router.use('/premium', premiumRouter);
+router.use('/admin', adminRouter);
 
 export default router;

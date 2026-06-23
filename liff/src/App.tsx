@@ -15,6 +15,8 @@ import { AuthLoadingScreen } from './components/AuthLoadingScreen.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { ProfilePage } from './pages/ProfilePage.js';
 import { PremiumPage } from './pages/PremiumPage.js';
+import { TopupMethodPage } from './pages/TopupMethodPage.js';
+import { ManualTopupPage } from './pages/ManualTopupPage.js';
 import { ChatPage } from './pages/ChatPage.js';
 import { SettingsPage } from './pages/SettingsPage.js';
 import { SupportPage } from './pages/SupportPage.js';
@@ -203,6 +205,11 @@ const App = () => {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/premium" element={<PremiumPage />} />
+            <Route path="/premium/topup" element={<TopupMethodPage />} />
+            <Route
+              path="/premium/topup/manual"
+              element={<ManualTopupPage />}
+            />
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/support" element={<SupportPage />} />

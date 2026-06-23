@@ -34,8 +34,10 @@ app.use('/webhooks', omiseWebhookRouter);
 
 const allowedOriginPatterns: Array<string | RegExp> = [
   'https://app.tinadiet.com',
+  'https://admin.tinadiet.com',
   'https://liff.line.me',
   'http://localhost:5173',
+  'http://localhost:5174',
   /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/,
 ];
 

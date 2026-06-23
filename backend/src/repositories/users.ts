@@ -12,6 +12,7 @@ const USER_COLUMNS = `
   daily_protein_g, daily_carbs_g, daily_fat_g,
   locale, timezone,
   plan, premium_expires_at, stripe_customer_id, omise_customer_id,
+  credit_balance_satang, abuse_warning_count, is_blocked,
   created_at, updated_at
 `;
 
@@ -32,6 +33,19 @@ type Stmts = {
   listExpiredPremium: Statement;
   revertAllExpired: Statement;
   deleteById: Statement;
+  search: Statement;
+  setPremiumExpiresAt: Statement;
+  updateCreditBalance: Statement;
+  incrementAbuseCount: Statement;
+  clearAbuseCount: Statement;
+  setBlocked: Statement;
+};
+
+type RawUser = Omit<User, 'is_blocked'> & { is_blocked: number };
+
+const hydrate = (row: RawUser | undefined): User | undefined => {
+  if (row === undefined) return undefined;
+  return { ...row, is_blocked: row.is_blocked === 1 };
 };
 
 let _stmts: Stmts | null = null;
@@ -128,6 +142,40 @@ const stmts = (): Stmts => {
          AND premium_expires_at <= ?`
     ),
     deleteById: db.prepare(`DELETE FROM users WHERE id = ?`),
+    search: db.prepare(
+      `SELECT ${USER_COLUMNS} FROM users
+       WHERE
+         (@q = '' OR display_name LIKE @qLike OR line_user_id LIKE @qLike)
+         AND (@flagged = 0 OR abuse_warning_count > 0 OR is_blocked = 1)
+       ORDER BY id DESC
+       LIMIT @limit OFFSET @offset`
+    ),
+    setPremiumExpiresAt: db.prepare(
+      `UPDATE users
+       SET premium_expires_at = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    ),
+    updateCreditBalance: db.prepare(
+      `UPDATE users
+       SET credit_balance_satang = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    ),
+    incrementAbuseCount: db.prepare(
+      `UPDATE users
+       SET abuse_warning_count = abuse_warning_count + 1,
+           updated_at = datetime('now')
+       WHERE id = ?`
+    ),
+    clearAbuseCount: db.prepare(
+      `UPDATE users
+       SET abuse_warning_count = 0, updated_at = datetime('now')
+       WHERE id = ?`
+    ),
+    setBlocked: db.prepare(
+      `UPDATE users
+       SET is_blocked = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    ),
   };
   return _stmts;
 };
@@ -137,70 +185,117 @@ export type UpsertFromLineInput = {
   display_name?: string | null;
 };
 
+const findByIdHydrated = (userId: number): User | undefined =>
+  hydrate(stmts().findById.get(userId) as RawUser | undefined);
+
+const requireById = (userId: number, context: string): User => {
+  const user = findByIdHydrated(userId);
+  if (user === undefined) {
+    throw new Error(`${context}: user ${userId} not found after update`);
+  }
+  return user;
+};
+
+export type UserSearchInput = {
+  query: string;
+  flaggedOnly: boolean;
+  limit: number;
+  offset: number;
+};
+
 export const userRepository = {
   findByLineUserId: (lineUserId: string): User | undefined => {
-    return stmts().findByLine.get(lineUserId) as User | undefined;
+    return hydrate(
+      stmts().findByLine.get(lineUserId) as RawUser | undefined
+    );
   },
 
-  findById: (id: number): User | undefined => {
-    return stmts().findById.get(id) as User | undefined;
-  },
+  findById: (id: number): User | undefined => findByIdHydrated(id),
 
   upsertFromLine: (input: UpsertFromLineInput): User => {
     const s = stmts();
-    const existing = s.findByLine.get(input.line_user_id) as User | undefined;
+    const existing = hydrate(
+      s.findByLine.get(input.line_user_id) as RawUser | undefined
+    );
 
     if (existing) {
       if (input.display_name && input.display_name !== existing.display_name) {
         s.updateDisplayName.run(input.display_name, existing.id, input.display_name);
-        return s.findById.get(existing.id) as User;
+        return requireById(existing.id, 'upsertFromLine');
       }
       return existing;
     }
 
     const info = s.insert.run(input.line_user_id, input.display_name ?? null);
     const id = Number(info.lastInsertRowid);
-    return s.findById.get(id) as User;
+    return requireById(id, 'upsertFromLine');
   },
 
   listProfileCompleted: (): User[] => {
-    return stmts().listProfileCompleted.all() as User[];
+    const rows = stmts().listProfileCompleted.all() as RawUser[];
+    return rows.map((r) => hydrate(r) as User);
+  },
+
+  search: (input: UserSearchInput): User[] => {
+    const rows = stmts().search.all({
+      q: input.query,
+      qLike: `%${input.query}%`,
+      flagged: input.flaggedOnly ? 1 : 0,
+      limit: input.limit,
+      offset: input.offset,
+    }) as RawUser[];
+    return rows.map((r) => hydrate(r) as User);
   },
 
   findByStripeCustomerId: (stripeCustomerId: string): User | undefined => {
-    return stmts().findByStripeCustomerId.get(stripeCustomerId) as User | undefined;
+    return hydrate(
+      stmts().findByStripeCustomerId.get(stripeCustomerId) as RawUser | undefined
+    );
   },
 
-  setStripeCustomerId: (userId: number, stripeCustomerId: string): User | undefined => {
-    const s = stmts();
-    s.setStripeCustomerId.run(stripeCustomerId, userId);
-    return s.findById.get(userId) as User | undefined;
+  setStripeCustomerId: (
+    userId: number,
+    stripeCustomerId: string
+  ): User | undefined => {
+    stmts().setStripeCustomerId.run(stripeCustomerId, userId);
+    return findByIdHydrated(userId);
   },
 
   findByOmiseCustomerId: (omiseCustomerId: string): User | undefined => {
-    return stmts().findByOmiseCustomerId.get(omiseCustomerId) as User | undefined;
+    return hydrate(
+      stmts().findByOmiseCustomerId.get(omiseCustomerId) as RawUser | undefined
+    );
   },
 
-  setOmiseCustomerId: (userId: number, omiseCustomerId: string): User | undefined => {
-    const s = stmts();
-    s.setOmiseCustomerId.run(omiseCustomerId, userId);
-    return s.findById.get(userId) as User | undefined;
+  setOmiseCustomerId: (
+    userId: number,
+    omiseCustomerId: string
+  ): User | undefined => {
+    stmts().setOmiseCustomerId.run(omiseCustomerId, userId);
+    return findByIdHydrated(userId);
   },
 
   applyPremium: (userId: number, expiresAtIso: string): User | undefined => {
-    const s = stmts();
-    s.applyPremium.run(expiresAtIso, userId);
-    return s.findById.get(userId) as User | undefined;
+    stmts().applyPremium.run(expiresAtIso, userId);
+    return findByIdHydrated(userId);
+  },
+
+  setPremiumExpiresAt: (
+    userId: number,
+    expiresAtIso: string | null
+  ): User | undefined => {
+    stmts().setPremiumExpiresAt.run(expiresAtIso, userId);
+    return findByIdHydrated(userId);
   },
 
   revertToFree: (userId: number): User | undefined => {
-    const s = stmts();
-    s.revertToFree.run(userId);
-    return s.findById.get(userId) as User | undefined;
+    stmts().revertToFree.run(userId);
+    return findByIdHydrated(userId);
   },
 
   listExpiredPremium: (nowIso: string): User[] => {
-    return stmts().listExpiredPremium.all(nowIso) as User[];
+    const rows = stmts().listExpiredPremium.all(nowIso) as RawUser[];
+    return rows.map((r) => hydrate(r) as User);
   },
 
   revertAllExpired: (nowIso: string): number => {
@@ -213,9 +308,32 @@ export const userRepository = {
     return info.changes > 0;
   },
 
+  updateCreditBalance: (
+    userId: number,
+    newBalanceSatang: number
+  ): User | undefined => {
+    stmts().updateCreditBalance.run(newBalanceSatang, userId);
+    return findByIdHydrated(userId);
+  },
+
+  incrementAbuseCount: (userId: number): User | undefined => {
+    stmts().incrementAbuseCount.run(userId);
+    return findByIdHydrated(userId);
+  },
+
+  clearAbuseCount: (userId: number): User | undefined => {
+    stmts().clearAbuseCount.run(userId);
+    return findByIdHydrated(userId);
+  },
+
+  setBlocked: (userId: number, blocked: boolean): User | undefined => {
+    stmts().setBlocked.run(blocked ? 1 : 0, userId);
+    return findByIdHydrated(userId);
+  },
+
   syncWeightChange: (userId: number, weightKg: number): User | undefined => {
     const s = stmts();
-    const existing = s.findById.get(userId) as User | undefined;
+    const existing = findByIdHydrated(userId);
     if (existing === undefined) return undefined;
     const profileComplete =
       existing.gender !== null &&
@@ -227,7 +345,7 @@ export const userRepository = {
 
     if (!profileComplete) {
       s.updateCurrentWeight.run(weightKg, userId);
-      return s.findById.get(userId) as User;
+      return findByIdHydrated(userId);
     }
 
     const goals = calculateNutritionGoals({
@@ -255,7 +373,7 @@ export const userRepository = {
       daily_carbs_g: goals.daily_carbs_g,
       daily_fat_g: goals.daily_fat_g,
     });
-    return s.findById.get(userId) as User;
+    return findByIdHydrated(userId);
   },
 
   updateProfile: (userId: number, input: ProfileInput): User => {
@@ -277,10 +395,6 @@ export const userRepository = {
       daily_carbs_g: goals.daily_carbs_g,
       daily_fat_g: goals.daily_fat_g,
     });
-    const updated = s.findById.get(userId) as User | undefined;
-    if (updated === undefined) {
-      throw new Error(`updateProfile: user ${userId} not found after update`);
-    }
-    return updated;
+    return requireById(userId, 'updateProfile');
   },
 };
