@@ -80,7 +80,7 @@ Has defaults (override if needed):
 - `PAYMENT_AMOUNT_THB=150`
 - `PAYMENT_GRANT_DAYS=30`
 
-See [Reference — Env Vars](/documentation/reference/env-vars/) for the full
+See [Reference — Env Vars](/docsfordevtina/reference/env-vars/) for the full
 list.
 
 ## Auto-redeploy on env change
@@ -106,7 +106,7 @@ node -e 'const db = require("better-sqlite3")("/data/app.db"); console.log(db.pr
 # { n: 2 }
 ```
 
-See [Ops — DB Queries](/documentation/ops/db-queries/) for a full
+See [Ops — DB Queries](/docsfordevtina/ops/db-queries/) for a full
 runbook of snippets.
 
 ## Monitoring

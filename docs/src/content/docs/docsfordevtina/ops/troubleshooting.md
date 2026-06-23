@@ -83,7 +83,7 @@ LIFF.
   https://api.tinadiet.com/api/v1/billing/omise/charge/<charge_id>` —
   forces sync and applies grant if eligible
 - Manual grant via Railway Console (last resort) — see
-  [Manual grants](/documentation/ops/manual-grants/)
+  [Manual grants](/docsfordevtina/ops/manual-grants/)
 
 ## LIFF blank/stuck screen
 
@@ -192,7 +192,7 @@ dig app.tinadiet.com
 
 ## See also
 
-- [Architecture overview](/documentation/architecture/overview/)
-- [Railway deployment](/documentation/deployment/railway/)
-- [Cloudflare LIFF deployment](/documentation/deployment/cloudflare-liff/)
-- [DB queries](/documentation/ops/db-queries/) — full diagnostic snippets
+- [Architecture overview](/docsfordevtina/architecture/overview/)
+- [Railway deployment](/docsfordevtina/deployment/railway/)
+- [Cloudflare LIFF deployment](/docsfordevtina/deployment/cloudflare-liff/)
+- [DB queries](/docsfordevtina/ops/db-queries/) — full diagnostic snippets

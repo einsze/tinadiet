@@ -44,7 +44,7 @@ each is required for a corresponding part of the system.
   - TEST mode credentials — sign up is free, no business verification needed
   - For LIVE you need Thai business documents (ภพ.20, DBD registration,
     bank statement, director ID); see
-    [Payments overview](/documentation/payments/overview/).
+    [Payments overview](/docsfordevtina/payments/overview/).
 
 ### Required for deploy
 
@@ -57,12 +57,12 @@ each is required for a corresponding part of the system.
 
 Once your accounts are in place:
 
-1. [Local setup](/documentation/getting-started/local-setup/) — clone +
+1. [Local setup](/docsfordevtina/getting-started/local-setup/) — clone +
    install + run dev servers
-2. [Architecture overview](/documentation/architecture/overview/) —
+2. [Architecture overview](/docsfordevtina/architecture/overview/) —
    understand the system you're touching
-3. [Backend stack](/documentation/backend/stack/) — repos, services, routes
-4. [LIFF stack](/documentation/liff/stack/) — frontend structure
+3. [Backend stack](/docsfordevtina/backend/stack/) — repos, services, routes
+4. [LIFF stack](/docsfordevtina/liff/stack/) — frontend structure
 
 ## Secret handling
 
@@ -76,5 +76,5 @@ or be granted access.
 `projects/liff/.gitignore` exclude them; GitHub Push Protection is also
 enabled to reject commits containing detected secrets.
 
-See [Secrets rotation](/documentation/ops/secrets-rotation/) for ongoing
+See [Secrets rotation](/docsfordevtina/ops/secrets-rotation/) for ongoing
 hygiene.

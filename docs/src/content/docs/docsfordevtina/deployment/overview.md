@@ -21,7 +21,7 @@ Production runs across three services + one registrar:
 | `https://api.tinadiet.com` | Railway service `backend` (Singapore) |
 | `https://app.tinadiet.com` | Cloudflare Worker `tinadiet-liff` |
 | `https://tinadiet.com` | Cloudflare Pages `tinadiet-docs` |
-| `https://tinadiet.com/documentation/*` | Same Pages project (this site) |
+| `https://tinadiet.com/docsfordevtina/*` | Same Pages project (this site) |
 
 DNS is managed in Cloudflare (registrar + DNS), records all proxied
 through Cloudflare's network (orange cloud).
@@ -64,7 +64,7 @@ curl https://api.tinadiet.com/healthz
 for the latest JS bundle hash. Hard-refresh in mobile LINE webview by
 closing + reopening from Rich Menu.
 
-**Docs**: Open `https://tinadiet.com/documentation/`. Pages keeps build
+**Docs**: Open `https://tinadiet.com/docsfordevtina/`. Pages keeps build
 log per deploy in Cloudflare dashboard.
 
 ## Rollback
@@ -105,6 +105,6 @@ revenue.
 
 ## See also
 
-- [Railway](/documentation/deployment/railway/) — backend specifics
-- [Cloudflare LIFF](/documentation/deployment/cloudflare-liff/) — Workers config
-- [Cloudflare Pages](/documentation/deployment/cloudflare-pages-docs/) — this site
+- [Railway](/docsfordevtina/deployment/railway/) — backend specifics
+- [Cloudflare LIFF](/docsfordevtina/deployment/cloudflare-liff/) — Workers config
+- [Cloudflare Pages](/docsfordevtina/deployment/cloudflare-pages-docs/) — this site

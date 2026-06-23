@@ -120,8 +120,8 @@ intentional, no cleanup needed.
 
 ## See also
 
-- [Payments overview](/documentation/payments/overview/) — how premium
+- [Payments overview](/docsfordevtina/payments/overview/) — how premium
   works
-- [Architecture — Key invariants — Rule 11](/documentation/architecture/key-invariants/#11-single-source-of-truth-for-ispremium)
+- [Architecture — Key invariants — Rule 11](/docsfordevtina/architecture/key-invariants/#11-single-source-of-truth-for-ispremium)
   — `isPremium` semantics
-- [DB queries](/documentation/ops/db-queries/) — full snippet runbook
+- [DB queries](/docsfordevtina/ops/db-queries/) — full snippet runbook

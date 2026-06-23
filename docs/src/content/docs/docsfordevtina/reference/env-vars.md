@@ -108,7 +108,7 @@ descriptions.
 System runtime config (PromptPay ID, pricing, threshold) is **NOT** env
 vars — it lives in the `system_settings` table and is editable via the
 admin dashboard `/settings` page (superadmin only). See [Admin
-overview](/documentation/admin/overview/).
+overview](/docsfordevtina/admin/overview/).
 
 ## LIFF (`projects/liff/.env`)
 

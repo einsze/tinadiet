@@ -102,7 +102,7 @@ against `Omise-Signature` + `Omise-Signature-Timestamp` headers using
 base64-decoded `OMISE_WEBHOOK_SECRET`. Handles `charge.*` events.
 
 **Crucial**: uses `express.raw({type: 'application/json'})` to preserve
-bytes for HMAC. See [Payments — Webhook signature](/documentation/payments/webhook-signature/).
+bytes for HMAC. See [Payments — Webhook signature](/docsfordevtina/payments/webhook-signature/).
 
 ## `/internal/jobs/*`
 

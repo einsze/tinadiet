@@ -161,9 +161,9 @@ edit needed:
 
 ## Related
 
-- [Admin overview](/documentation/admin/overview/) — UI walkthrough +
+- [Admin overview](/docsfordevtina/admin/overview/) — UI walkthrough +
   role permissions
-- [Cloudflare — LIFF](/documentation/deployment/cloudflare-liff/) — same
+- [Cloudflare — LIFF](/docsfordevtina/deployment/cloudflare-liff/) — same
   pattern, separate project
-- [Environment variables](/documentation/reference/env-vars/) — full
+- [Environment variables](/docsfordevtina/reference/env-vars/) — full
   list including admin-specific vars

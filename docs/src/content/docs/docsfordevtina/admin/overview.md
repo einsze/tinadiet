@@ -139,7 +139,7 @@ anything.
 
 Already in place:
 - ✅ Custom domain only (`workers.dev` URL disabled — see [Cloudflare
-  Admin deploy guide](/documentation/deployment/cloudflare-admin/))
+  Admin deploy guide](/docsfordevtina/deployment/cloudflare-admin/))
 - ✅ Bcrypt cost 10 (~150ms per verify — adequate brute-force resistance
   at this scale)
 - ✅ JWT audience claim separates admin from user tokens
@@ -157,9 +157,9 @@ Recommended (open):
 
 ## Related docs
 
-- [Manual top-up flow](/documentation/payments/manual-topup/) — what the
+- [Manual top-up flow](/docsfordevtina/payments/manual-topup/) — what the
   operator is reviewing
-- [Credit system](/documentation/payments/credit-system/) — what
+- [Credit system](/docsfordevtina/payments/credit-system/) — what
   happens to the credit ledger when you approve
-- [Cloudflare admin deploy](/documentation/deployment/cloudflare-admin/) —
+- [Cloudflare admin deploy](/docsfordevtina/deployment/cloudflare-admin/) —
   how the worker got deployed

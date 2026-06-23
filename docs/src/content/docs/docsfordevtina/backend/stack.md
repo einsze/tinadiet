@@ -147,7 +147,7 @@ free-form log strings; structured fields are searchable.
 ## Anti-patterns to avoid
 
 - **Don't use `db.prepare()` at module top level.** Use lazy `stmts()`
-  getter. See [Key invariants](/documentation/architecture/key-invariants/).
+  getter. See [Key invariants](/docsfordevtina/architecture/key-invariants/).
 - **Don't put business logic in routes.** Push it down to services.
 - **Don't use `any`.** TypeScript strict mode catches missing types — fix
   the type, not the suppression.

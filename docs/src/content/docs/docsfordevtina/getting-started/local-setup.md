@@ -6,7 +6,7 @@ sidebar:
 ---
 
 This walks you from zero to "bot replies to my messages on LINE in dev"
-in about 15 minutes once accounts from [Prerequisites](/documentation/getting-started/prerequisites/)
+in about 15 minutes once accounts from [Prerequisites](/docsfordevtina/getting-started/prerequisites/)
 are ready.
 
 ## 1. Clone
@@ -164,7 +164,7 @@ OMISE_WEBHOOK_SECRET=       # base64 secret from dashboard "Roll secret"
 ```
 
 Get keys at `dashboard.omise.co/test/keys`. See
-[Omise integration](/documentation/payments/omise/) for the full setup
+[Omise integration](/docsfordevtina/payments/omise/) for the full setup
 including webhook registration.
 
 Restart the backend after editing `.env`.

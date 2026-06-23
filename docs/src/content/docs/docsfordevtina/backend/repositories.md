@@ -65,7 +65,7 @@ export const fooRepository = {
 };
 ```
 
-**Why lazy?** Read [Key invariants — Rule 1](/documentation/architecture/key-invariants/#1-lazy-init-prepared-statements).
+**Why lazy?** Read [Key invariants — Rule 1](/docsfordevtina/architecture/key-invariants/#1-lazy-init-prepared-statements).
 
 ## Hydration (boolean from INTEGER)
 

@@ -30,42 +30,42 @@ export default defineConfig({
       lastUpdated: true,
       pagination: true,
       sidebar: [
-        { label: 'Introduction', slug: 'documentation/introduction' },
+        { label: 'Introduction', slug: 'docsfordevtina/introduction' },
         {
           label: 'Getting Started',
-          autogenerate: { directory: 'documentation/getting-started' },
+          autogenerate: { directory: 'docsfordevtina/getting-started' },
         },
         {
           label: 'Architecture',
-          autogenerate: { directory: 'documentation/architecture' },
+          autogenerate: { directory: 'docsfordevtina/architecture' },
         },
         {
           label: 'Backend',
-          autogenerate: { directory: 'documentation/backend' },
+          autogenerate: { directory: 'docsfordevtina/backend' },
         },
         {
           label: 'LIFF',
-          autogenerate: { directory: 'documentation/liff' },
+          autogenerate: { directory: 'docsfordevtina/liff' },
         },
         {
           label: 'Admin Dashboard',
-          autogenerate: { directory: 'documentation/admin' },
+          autogenerate: { directory: 'docsfordevtina/admin' },
         },
         {
           label: 'Payments',
-          autogenerate: { directory: 'documentation/payments' },
+          autogenerate: { directory: 'docsfordevtina/payments' },
         },
         {
           label: 'Deployment',
-          autogenerate: { directory: 'documentation/deployment' },
+          autogenerate: { directory: 'docsfordevtina/deployment' },
         },
         {
           label: 'Operations',
-          autogenerate: { directory: 'documentation/ops' },
+          autogenerate: { directory: 'docsfordevtina/ops' },
         },
         {
           label: 'Reference',
-          autogenerate: { directory: 'documentation/reference' },
+          autogenerate: { directory: 'docsfordevtina/reference' },
         },
       ],
       head: [
@@ -77,8 +77,8 @@ export default defineConfig({
           },
         },
         // Defense-in-depth: tell search engines NOT to index the dev docs.
-        // (Cloudflare Access is the primary gate; this catches anything that
-        // slips through and discourages incidental SEO surfacing.)
+        // (Obscure path + noindex + robots.txt combined; can be upgraded to
+        // Cloudflare Access auth later if collaborator count grows.)
         {
           tag: 'meta',
           attrs: {

@@ -54,7 +54,7 @@ USER REDEEMS
 | Future themes / day passes need pricing logic | Credit is generic — anything can be priced in credit |
 | Stripe vs Omise — multiple ledgers | One ledger, multiple providers feed in (future) |
 
-The single ledger ([`credit_ledger`](/documentation/architecture/data-model/))
+The single ledger ([`credit_ledger`](/docsfordevtina/architecture/data-model/))
 becomes the source of truth for all monetization. Providers (manual PromptPay
 now, Omise later) just feed credit *into* the ledger; downstream
 spend (premium, future themes, etc.) draws *from* it.
@@ -145,14 +145,14 @@ slip via authenticated routes (different routes, same source file).
 
 ## Going deeper
 
-- [Credit system](/documentation/payments/credit-system/) — ledger
+- [Credit system](/docsfordevtina/payments/credit-system/) — ledger
   schema, source types, the `applyCreditMutation` atomic transaction
-- [Manual top-up flow](/documentation/payments/manual-topup/) — full
+- [Manual top-up flow](/docsfordevtina/payments/manual-topup/) — full
   user + operator user flow, edge cases, abuse handling
-- [Webhook signature](/documentation/payments/webhook-signature/) —
+- [Webhook signature](/docsfordevtina/payments/webhook-signature/) —
   HMAC details for Omise (still relevant for the dormant code that will
   reactivate post-KYC)
-- [Omise integration](/documentation/payments/omise/) — Omise client
+- [Omise integration](/docsfordevtina/payments/omise/) — Omise client
   implementation (currently dormant, ready to reactivate)
 
 ## Cost model (manual top-up)

@@ -69,7 +69,7 @@ scans the QR, confirms amount, transfers.
 The amount in the QR is **baked in** — all Thai banks pre-fill it. Some
 banks (Bangkok Bank, TTB, Krungsri) allow user to edit the amount; this
 is fine because the operator records the *actual* amount from the slip
-later. See [Payments overview](/documentation/payments/overview/) for why
+later. See [Payments overview](/docsfordevtina/payments/overview/) for why
 operator-records-actual is the design choice.
 
 ### Step 5 — Upload slip

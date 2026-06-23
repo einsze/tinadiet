@@ -4,7 +4,7 @@ Thai-first AI nutrition coach delivered through LINE LIFF + Messaging API.
 End-users log food via chat or photo, track macros against personalized
 goals, and consult with Tina (premium).
 
-> 📖 **Full developer documentation**: [tinadiet.com/documentation](https://tinadiet.com/documentation/)
+> 📖 **Full developer documentation**: [tinadiet.com/documentation](https://tinadiet.com/docsfordevtina/)
 
 ## Status — production
 
@@ -69,16 +69,16 @@ on push to `main`.
 
 ## Quick links
 
-- **🏗 Architecture overview**: [tinadiet.com/documentation/architecture/overview](https://tinadiet.com/documentation/architecture/overview/)
-- **💻 Local setup**: [tinadiet.com/documentation/getting-started/local-setup](https://tinadiet.com/documentation/getting-started/local-setup/)
-- **💰 Payments (Omise)**: [tinadiet.com/documentation/payments/overview](https://tinadiet.com/documentation/payments/overview/)
-- **🚀 Deployment**: [tinadiet.com/documentation/deployment/overview](https://tinadiet.com/documentation/deployment/overview/)
-- **🔧 DB queries / ops**: [tinadiet.com/documentation/ops/db-queries](https://tinadiet.com/documentation/ops/db-queries/)
+- **🏗 Architecture overview**: [tinadiet.com/docsfordevtina/architecture/overview](https://tinadiet.com/docsfordevtina/architecture/overview/)
+- **💻 Local setup**: [tinadiet.com/docsfordevtina/getting-started/local-setup](https://tinadiet.com/docsfordevtina/getting-started/local-setup/)
+- **💰 Payments (Omise)**: [tinadiet.com/docsfordevtina/payments/overview](https://tinadiet.com/docsfordevtina/payments/overview/)
+- **🚀 Deployment**: [tinadiet.com/docsfordevtina/deployment/overview](https://tinadiet.com/docsfordevtina/deployment/overview/)
+- **🔧 DB queries / ops**: [tinadiet.com/docsfordevtina/ops/db-queries](https://tinadiet.com/docsfordevtina/ops/db-queries/)
 
 ## Setup (for collaborators)
 
 Prereqs: Node 22+, Git, accounts at GitHub + LINE Developers + Omise +
-OpenAI + Cloudflare + Railway. See [Prerequisites](https://tinadiet.com/documentation/getting-started/prerequisites/).
+OpenAI + Cloudflare + Railway. See [Prerequisites](https://tinadiet.com/docsfordevtina/getting-started/prerequisites/).
 
 ```bash
 git clone https://github.com/einsze/tinadiet.git
@@ -103,7 +103,7 @@ npm run dev                # http://localhost:4321
 ```
 
 For full local setup including cloudflared tunnel for LINE webhook,
-see the [Local Setup](https://tinadiet.com/documentation/getting-started/local-setup/)
+see the [Local Setup](https://tinadiet.com/docsfordevtina/getting-started/local-setup/)
 docs page.
 
 ## Stack reference

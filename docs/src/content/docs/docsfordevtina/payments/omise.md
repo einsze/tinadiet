@@ -178,7 +178,7 @@ userRepository.applyPremium(user.id, grant.ends);
 The user is updated to `plan='premium', premium_expires_at=<grant.ends>`.
 
 If user was already premium, the new `premium_expires_at` is later than
-the previous one (stacking — see [Overview](/documentation/payments/overview/#grant-stacking)).
+the previous one (stacking — see [Overview](/docsfordevtina/payments/overview/#grant-stacking)).
 
 ## TEST mode simulation
 

@@ -81,7 +81,7 @@ type ConsultationResult =
 
 ### `omise.ts`
 
-Omise payment integration. See [Payments overview](/documentation/payments/overview/).
+Omise payment integration. See [Payments overview](/docsfordevtina/payments/overview/).
 
 ```ts
 createOmiseCharge(user, method) → CreateChargeResult

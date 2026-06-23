@@ -76,7 +76,7 @@ for payment (currently dormant), and LINE for messaging + auth.
 - Backend routes prefixed `/api/v1/admin/*`, gated by `requireAdmin` and
   `requireSuperadmin` middleware
 - Workers.dev URL is disabled — only the custom domain serves the dashboard
-  (security hardening, see [Admin overview](/documentation/admin/overview/))
+  (security hardening, see [Admin overview](/docsfordevtina/admin/overview/))
 
 ### Backend (Railway)
 - Single Express process, Node 22 ESM, `tsx watch` for dev
@@ -98,7 +98,7 @@ for payment (currently dormant), and LINE for messaging + auth.
 - File at `/data/app.db` on Railway volume (`backend-volume`, 1 GB)
 - Accessed synchronously via `better-sqlite3` — no async/await for queries
 - Migrations applied at boot via `runMigrations()` (idempotent)
-- See [Data model](/documentation/architecture/data-model/) for schema
+- See [Data model](/docsfordevtina/architecture/data-model/) for schema
 
 ### External services
 - **OpenAI** — text parsing (food logs from chat), vision parsing (food
@@ -183,7 +183,7 @@ Backend tx:
   ▼ LIFF shows "Premium active until …"
 ```
 
-See [Manual top-up flow](/documentation/payments/manual-topup/) for full
+See [Manual top-up flow](/docsfordevtina/payments/manual-topup/) for full
 operator workflow + edge cases.
 
 ## Data flow: payment (Omise PromptPay — currently dormant)
@@ -215,8 +215,8 @@ the topup method picker is the user-facing reminder.
 
 ## Read next
 
-- [Data model](/documentation/architecture/data-model/) — every table
-- [Key invariants](/documentation/architecture/key-invariants/) — patterns
+- [Data model](/docsfordevtina/architecture/data-model/) — every table
+- [Key invariants](/docsfordevtina/architecture/key-invariants/) — patterns
   that must not be broken
-- [Backend stack](/documentation/backend/stack/) — Express conventions
-- [LIFF stack](/documentation/liff/stack/) — React conventions
+- [Backend stack](/docsfordevtina/backend/stack/) — Express conventions
+- [LIFF stack](/docsfordevtina/liff/stack/) — React conventions

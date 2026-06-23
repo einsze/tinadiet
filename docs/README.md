@@ -17,7 +17,7 @@
 | **Audience** | Developer + future collaborators | Per session 2026-06-13; product UX docs already covered by LIFF SupportPage |
 | **Hosting** | Cloudflare Pages (separate project `tinadiet-docs`) | Decouple from LIFF; static site = cheap + fast; Pages auto-deploy on push |
 | **Domain** | `tinadiet.com` apex (was unused) | Brand domain, dev-facing → makes sense to claim apex |
-| **Path** | `/documentation/*` for docs, `/` for minimal landing | Both useful; landing page provides apex root context for stumbling visitors |
+| **Path** | `/docsfordevtina/*` for docs, `/` for minimal landing | Both useful; landing page provides apex root context for stumbling visitors |
 | **Stack** | Astro + Starlight | Modern, MDX-based, built-in sidebar/search/dark-mode, native CF Pages, fastest DX vs VitePress/Docusaurus |
 | **Repo** | Monorepo: new `projects/docs/` directory | Same git history, single PR for backend + LIFF + docs changes when they touch same feature |
 | **Language** | English | Dev-facing; Thai content stays in LIFF for end-users |
@@ -71,7 +71,7 @@ github.com/einsze/tinadiet
 |---|---|---|
 | `/` | Minimal landing page: logo Tina + 1-liner + 2 CTA buttons | `src/pages/index.astro` |
 | `/documentation` | Docs landing (Starlight intro) | `src/content/docs/index.md` |
-| `/documentation/<section>/<page>` | Individual doc pages | `src/content/docs/<section>/<page>.md` |
+| `/docsfordevtina/<section>/<page>` | Individual doc pages | `src/content/docs/<section>/<page>.md` |
 | `/*` (anything else) | 404 | Astro default |
 
 **Note on apex landing page content**:
@@ -136,7 +136,7 @@ Starlight by default mounts at `/`. To mount at `/documentation`, we use a top-l
   })
   ```
 - `src/pages/index.astro` handles `/` (the landing page)
-- Starlight serves everything under `/documentation/*`
+- Starlight serves everything under `/docsfordevtina/*`
 - ⚠ Verify Starlight `prefix` option is supported at build time; if not, use Astro `base` config or Cloudflare redirect rules.
 
 If `prefix` doesn't work cleanly, fallback: put landing inside Starlight as a custom layout for `index.md`, hide from sidebar. Less clean but works.
@@ -472,7 +472,7 @@ Skip for initial ship, add iteratively: ADRs, per-service deep dives, troublesho
   - Env vars: `NODE_VERSION=22`
 - [ ] First deploy → verify `tinadiet-docs.pages.dev` works
 - [ ] DNS: Cloudflare → tinadiet.com → custom domain on Pages project
-- [ ] Verify `https://tinadiet.com/` and `https://tinadiet.com/documentation/` both live
+- [ ] Verify `https://tinadiet.com/` and `https://tinadiet.com/docsfordevtina/` both live
 - [ ] Add CNAME for `www.tinadiet.com` → 301 redirect to apex (optional)
 
 ### 7.5 Polish (~30 min)

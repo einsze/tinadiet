@@ -115,7 +115,7 @@ export const startCronJobs = (): void => {
 };
 ```
 
-**Always pass `{ timezone: env.CRON_TZ }`** ([rule 12 in invariants](/documentation/architecture/key-invariants/#12-always-pass-timezone-to-node-cron)).
+**Always pass `{ timezone: env.CRON_TZ }`** ([rule 12 in invariants](/docsfordevtina/architecture/key-invariants/#12-always-pass-timezone-to-node-cron)).
 Default `env.CRON_TZ` is `Asia/Bangkok`.
 
 ## Manual triggers

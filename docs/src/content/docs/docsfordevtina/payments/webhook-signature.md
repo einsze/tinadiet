@@ -171,7 +171,7 @@ after sig verify; reject otherwise. ~3 lines of code.
 
 ## See also
 
-- [Key invariants — Rule 2](/documentation/architecture/key-invariants/#2-express-webhook-routes-before-expressjson) — body parser order
-- [Key invariants — Rule 3](/documentation/architecture/key-invariants/#3-payment-idempotency-via-early-return) — idempotency pattern
-- [Omise integration](/documentation/payments/omise/) — charge flow
+- [Key invariants — Rule 2](/docsfordevtina/architecture/key-invariants/#2-express-webhook-routes-before-expressjson) — body parser order
+- [Key invariants — Rule 3](/docsfordevtina/architecture/key-invariants/#3-payment-idempotency-via-early-return) — idempotency pattern
+- [Omise integration](/docsfordevtina/payments/omise/) — charge flow
 - Memory file `feedback-omise-webhook-signature` — original lesson notes

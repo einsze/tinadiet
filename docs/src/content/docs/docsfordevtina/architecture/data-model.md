@@ -55,7 +55,7 @@ CREATE TABLE users (
   premium" check. See `domain/profile.ts` `isPremium()`.
 - `credit_balance_satang` is the user's wallet. Read-only for application
   code outside `services/credit.ts` — mutations only via
-  `applyCreditMutation`. See [Credit system](/documentation/payments/credit-system/).
+  `applyCreditMutation`. See [Credit system](/docsfordevtina/payments/credit-system/).
 - `abuse_warning_count` increments per operator-flagged submission. 3+ →
   future submissions auto-route to superadmin review. 5+ → user blocked.
 - `is_blocked` set automatically at 5 warnings, or manually by superadmin.
@@ -224,7 +224,7 @@ CREATE TABLE admin_users (
 **Notes**
 - Migration 0008 seeds 2 superadmin rows for the project owner. Both
   passwords MUST be rotated before public launch (see [Admin
-  overview](/documentation/admin/overview/)).
+  overview](/docsfordevtina/admin/overview/)).
 - `created_by_admin_id` references admin_users itself (NULL for seeded
   rows). Self-FK is intentional for audit ("who created which operator").
 - Deactivate (`is_active=0`) rather than delete — keeps audit links on
@@ -271,11 +271,11 @@ CREATE TABLE manual_payments (
 - `revoked` is terminal; once revoked, ledger has a compensating
   `revoke_topup` entry deducting the granted credit.
 - Slip files at `slip_file_path` are stored on the Railway volume (not in
-  DB). See [Manual top-up flow](/documentation/payments/manual-topup/).
+  DB). See [Manual top-up flow](/docsfordevtina/payments/manual-topup/).
 
 ### `credit_ledger` (Sprint 6 M4)
 Immutable audit log of every credit mutation. Source of truth for
-reconciliation. See [Credit system](/documentation/payments/credit-system/)
+reconciliation. See [Credit system](/docsfordevtina/payments/credit-system/)
 for the full design.
 
 ```sql

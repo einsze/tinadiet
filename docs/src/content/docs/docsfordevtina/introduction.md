@@ -88,7 +88,7 @@ discussion:
    transfer (operator-reviewed) and then **redeem** credit for premium
    bundles (1/3/6/12 months). Omise auto-payment code stays dormant for
    now ("Coming Soon" in UI), pending Thai business verification. See
-   [Payments overview](/documentation/payments/overview/).
+   [Payments overview](/docsfordevtina/payments/overview/).
 5. **Operator review for top-up.** Slip upload + manual review is the
    primary cash inflow path. Operators enter the *actual* amount they
    see on the slip — eliminates over/under-payment edge cases by design.
@@ -101,9 +101,9 @@ discussion:
 
 ## Where to next
 
-- [**Prerequisites**](/documentation/getting-started/prerequisites/) — what
+- [**Prerequisites**](/docsfordevtina/getting-started/prerequisites/) — what
   accounts and tools you'll need.
-- [**Local setup**](/documentation/getting-started/local-setup/) — clone,
+- [**Local setup**](/docsfordevtina/getting-started/local-setup/) — clone,
   install, run backend + LIFF on your machine.
-- [**Architecture overview**](/documentation/architecture/overview/) —
+- [**Architecture overview**](/docsfordevtina/architecture/overview/) —
   system diagram + data flow.
