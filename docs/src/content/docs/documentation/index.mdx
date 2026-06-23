@@ -35,27 +35,29 @@ site is for engineering.
     System diagram, data model, and invariants you must not break. [Read →](/documentation/architecture/overview/)
   </Card>
   <Card title="Local setup" icon="laptop">
-    Clone, install, run backend + LIFF locally with cloudflared tunnel. [Read →](/documentation/getting-started/local-setup/)
+    Clone, install, run backend + LIFF + admin locally with cloudflared tunnel. [Read →](/documentation/getting-started/local-setup/)
   </Card>
   <Card title="Backend" icon="seti:typescript">
-    Express + better-sqlite3 + LINE SDK + OpenAI + Omise. Lazy stmts pattern. [Read →](/documentation/backend/stack/)
+    Express + better-sqlite3 + LINE SDK + OpenAI + bcryptjs. Lazy stmts pattern. [Read →](/documentation/backend/stack/)
   </Card>
   <Card title="LIFF" icon="seti:react">
     Vite + React + Tailwind + multi-page routing in LINE's webview. [Read →](/documentation/liff/stack/)
   </Card>
-  <Card title="Payments" icon="approve-check">
-    Omise PromptPay + TrueMoney manual-renew model, HMAC signature verify. [Read →](/documentation/payments/overview/)
+  <Card title="Payments & Credit" icon="approve-check">
+    Manual PromptPay top-up → credit ledger → redeem premium. Operator-reviewed slips. [Read →](/documentation/payments/overview/)
   </Card>
-  <Card title="Operations" icon="setting">
-    DB queries, manual grants, troubleshooting, monitoring. [Read →](/documentation/ops/db-queries/)
+  <Card title="Admin Dashboard" icon="seti:shield">
+    Operator + superadmin web UI at admin.tinadiet.com. Review slips, manage users, settings. [Read →](/documentation/admin/overview/)
   </Card>
 </CardGrid>
 
 ## Project at a glance
 
 - **Brand**: Tina Diet — Thai-first nutrition coach with a friendly female persona (ค่ะ register)
-- **Surface**: LINE chat bot (Messaging API) + LIFF SPA (LINE-embedded React app)
+- **User surface**: LINE chat bot (Messaging API) + LIFF SPA (LINE-embedded React app)
+- **Operator surface**: Admin dashboard at `admin.tinadiet.com` (separate Cloudflare Worker)
 - **Backend**: Node 22 / Express / TypeScript ESM / better-sqlite3 on a Railway volume
 - **AI**: OpenAI gpt-4o (vision) + gpt-4o-mini (text) for food parsing, coaching, consultation
-- **Payments**: Omise PromptPay + TrueMoney, 150 THB / 30 days, manual renewal
-- **Hosting**: Railway (backend) · Cloudflare Workers (LIFF) · Cloudflare Pages (these docs)
+- **Payments**: Manual PromptPay top-up → credit ledger → bundle redemption (1/3/6/12 months).
+  Omise auto-payment dormant pending KYC.
+- **Hosting**: Railway (backend) · Cloudflare Workers (LIFF + admin, separate projects) · Cloudflare Pages (these docs)

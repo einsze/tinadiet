@@ -12,27 +12,45 @@ goals, and consult with Tina (premium).
 |---|---|---|
 | Backend API | [api.tinadiet.com](https://api.tinadiet.com/healthz) | Railway · Express · better-sqlite3 |
 | LIFF app | [app.tinadiet.com](https://app.tinadiet.com) | Cloudflare Workers · Vite · React · Tailwind |
+| **Admin dashboard** | **[admin.tinadiet.com](https://admin.tinadiet.com)** | Cloudflare Workers · Vite · React · Tailwind |
 | Landing + docs | [tinadiet.com](https://tinadiet.com) | Cloudflare Pages · Astro · Starlight |
 | LINE OA | `@913civqx` (TinaDiet) | LINE Messaging API |
 
-**Sprints closed**: 1, 2, 3, 4 (M1-M3), 5 (M1-M3), 6 (M1-M2).
-**Payment**: Omise PromptPay + TrueMoney working e2e in TEST mode. LIVE
-mode pending client Thai business verification docs.
-**Open**: Sprint 6 M3 (renewal reminders cron), production hardening
-(Sentry, rate limiting), Omise LIVE flip, lawyer review of legal templates.
+**Sprints closed**: 1, 2, 3, 4 (M1-M3), 5 (M1-M3), 6 (M1-M4).
+
+**Payment model (current)**: manual PromptPay top-up → credit balance →
+redeem premium bundles. Operators review uploaded slips via the admin
+dashboard. Omise auto-payment is dormant (UI shown as "Coming Soon")
+pending Thai business verification — code will be refactored post-KYC to
+feed the credit ledger too (architectural unification).
+
+**Open**: rotate seed superadmin passwords pre-launch, configure
+PromptPay receiver ID in admin settings, test QR scan with 3 major Thai
+banks (Kasikorn / SCB / Krungthai), Dependabot CVE triage (21
+vulnerabilities), production hardening (Sentry, rate limiting), Omise
+LIVE flip when KYC done, lawyer review of legal templates.
 
 ## Repository layout
 
 ```
 projects/
-├── backend/   Express + TypeScript ESM + better-sqlite3 + LINE SDK + OpenAI + Omise
+├── backend/   Express + TypeScript ESM + better-sqlite3 + LINE SDK + OpenAI + Omise + bcryptjs
 │             Serves LINE webhook (/webhook/line), Omise webhook (/webhooks/omise),
-│             LIFF-facing API (/api/v1/*), and internal job triggers.
-│             Deployed to Railway (Singapore, Hobby plan).
+│             LIFF-facing API (/api/v1/*), admin API (/api/v1/admin/*), and
+│             internal job triggers. Deployed to Railway (Singapore, Hobby plan).
 │
-├── liff/      Vite + React 18 + Tailwind 3 + react-router-dom v6
+├── liff/      Vite + React 18 + Tailwind 3 + react-router-dom v6 (rose-pink brand)
 │             Multi-page LIFF SPA (Home / Ask Tina / Premium / Profile / Support).
-│             Deployed to Cloudflare Workers Static Assets.
+│             Premium page is a marketplace: wallet balance + top-up CTA + bundle
+│             redemption. Deployed to Cloudflare Workers Static Assets.
+│
+├── admin/     Vite + React 18 + Tailwind 3 + react-router-dom v6 (blue brand)
+│             Operator / superadmin dashboard at admin.tinadiet.com. Pages:
+│             payment review (pending + history + detail), user management
+│             (credit adjust + abuse flags + block), settings (PromptPay ID +
+│             pricing + threshold), operators CRUD, account (password change).
+│             Email + bcrypt password auth → 8h admin JWT. Deployed to Cloudflare
+│             Workers Static Assets (separate project from LIFF).
 │
 ├── docs/      Astro 5 + Starlight 0.30 developer documentation site
 │             Source of truth for architecture, API reference, deployment + ops

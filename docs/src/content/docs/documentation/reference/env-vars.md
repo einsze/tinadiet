@@ -83,7 +83,7 @@ descriptions.
 | `BILLING_SUCCESS_URL` | `https://app.tinadiet.com/?upgraded=1` | Redirect after Stripe checkout success |
 | `BILLING_CANCEL_URL` | `https://app.tinadiet.com/?upgrade_canceled=1` | Redirect after cancellation |
 
-### Omise (PRIMARY payment provider)
+### Omise (currently DORMANT — pending KYC)
 
 | Var | Default | Description |
 |---|---|---|
@@ -92,9 +92,23 @@ descriptions.
 | `OMISE_API_BASE_URL` | `https://api.omise.co` | API base — change only if Omise mirrors |
 | `OMISE_API_VERSION` | `2019-05-29` | API version header sent on every request |
 | `OMISE_WEBHOOK_SECRET` | `''` | Base64-encoded HMAC secret. Empty → webhook accept-all (DEV ONLY) |
-| `PAYMENT_AMOUNT_THB` | `150` | Price per grant period |
-| `PAYMENT_GRANT_DAYS` | `30` | Days of premium per successful payment |
+| `PAYMENT_AMOUNT_THB` | `150` | Price per grant period (legacy; new model uses credit) |
+| `PAYMENT_GRANT_DAYS` | `30` | Days of premium per successful payment (legacy) |
 | `PAYMENT_RETURN_URL` | `https://app.tinadiet.com/premium?omise_return=1` | TrueMoney redirect-back URL |
+
+### Admin dashboard + manual top-up (Sprint 6 M4)
+
+| Var | Default | Description |
+|---|---|---|
+| `ADMIN_JWT_SECRET` | falls back to `SESSION_JWT_SECRET` | HS256 secret for admin JWT (8h, audience='admin'). **Set separately in prod** for isolation from user-facing LIFF tokens. |
+| `ADMIN_BASE_URL` | `https://admin.tinadiet.com` | Admin dashboard URL (rarely used directly) |
+| `SLIP_STORAGE_DIR` | `./data/slips` | Where uploaded slip images live. Production: `/data/slips` (Railway volume) |
+| `SLIP_MAX_BYTES` | `5242880` (5 MB) | Max accepted slip file size |
+
+System runtime config (PromptPay ID, pricing, threshold) is **NOT** env
+vars — it lives in the `system_settings` table and is editable via the
+admin dashboard `/settings` page (superadmin only). See [Admin
+overview](/documentation/admin/overview/).
 
 ## LIFF (`projects/liff/.env`)
 
@@ -105,6 +119,18 @@ directly in the bundle.
 |---|---|
 | `VITE_API_BASE_URL` | Backend URL — `https://api.tinadiet.com` in prod, `http://localhost:3000` in dev |
 | `VITE_LIFF_ID` | LIFF channel ID from LINE Developers Console |
+
+In Cloudflare Workers Builds (production builds), also set:
+- `NODE_VERSION=22` — required since wrangler 4
+
+## Admin (`projects/admin/.env`)
+
+Admin dashboard reads only `VITE_*` prefixed vars at BUILD time (same
+pattern as LIFF). No runtime env vars on the client.
+
+| Var | Description |
+|---|---|
+| `VITE_API_BASE_URL` | Backend URL — `https://api.tinadiet.com` in prod, `http://localhost:3000` in dev |
 
 In Cloudflare Workers Builds (production builds), also set:
 - `NODE_VERSION=22` — required since wrangler 4

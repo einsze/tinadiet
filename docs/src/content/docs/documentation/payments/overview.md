@@ -1,160 +1,183 @@
 ---
 title: Overview
-description: Payment provider strategy, manual-renewal model, grant stacking.
+description: Manual top-up + credit ledger + bundle redemption. Operator review workflow. Omise dormant pending KYC.
 sidebar:
   order: 1
 ---
 
-Tina Diet's premium tier is **150 THB for 30 days**, paid via **Omise**
-PromptPay QR or TrueMoney Wallet. **No auto-charge** — users pay each
-period explicitly, and unspent days carry over via grant stacking.
+Tina Diet's monetization is **credit-based**. Users top up credit
+via manual PromptPay transfer (operator-reviewed), then **redeem**
+credit for premium bundles (1, 3, 6, or 12 months).
 
-## Why this model?
+This is a deliberate pivot from the original direct-charge Omise model
+because Omise business verification takes ~1 month and we needed a
+launch-ready payment path that uses the client's existing personal
+PromptPay account (later promotable to a business Tax ID).
 
-In Thailand:
-- **PromptPay** is universal (every bank's mobile app supports QR scan)
-- **TrueMoney Wallet** is the second-most-popular e-wallet
-- **Recurring auto-charge** is much rarer than in the West; Thai users are
-  accustomed to one-time purchases and explicit renewals
-- Stripe-style auto-renewing subscriptions don't fit local payment habits
+## High-level flow
 
-So we use Omise's one-time **Charges API** (not their Recurring Schedule
-API), and treat each successful charge as a 30-day grant.
+```
+USER
+─────
+1. Open LIFF → /premium → tap "Top up credit"
+2. Choose method: Manual PromptPay (active) / Omise (Coming Soon)
+3. Pick amount: 50 / 100 / 200 / 500 / 1000 THB or custom
+4. Backend generates PromptPay QR with amount baked in (server-side)
+5. Scan QR in any Thai bank app, transfer
+6. Upload slip back to LIFF
+7. See status "Menunggu konfirmasi (1–24 jam)"
 
-## Grant stacking
+OPERATOR
+─────────
+8. Login to admin.tinadiet.com
+9. /payments/pending shows oldest submission first (FIFO queue)
+10. Open submission → view slip image fullscreen
+11. Cross-check the slip vs. their own bank statement
+12. Enter ACTUAL amount from slip (operator-editable)
+13. Approve → user gets credit = actual amount
+    Reject → user gets push notification with reason, can re-submit
 
-When a payment succeeds, `services/omise.ts` `computeGrantWindow()`
-computes:
+USER REDEEMS
+─────────────
+14. Credit balance updated in /premium marketplace
+15. Tap "Premium 1 mo (150 credit)" / 3 / 6 / 12
+16. Credit deducted, premium_expires_at extended (stacking)
+```
+
+## Why credit-first?
+
+| Problem (old direct-charge model) | Credit-system solution |
+|---|---|
+| User transfers 100 THB instead of 150 — refund? | Operator enters 100 → user gets 100 credit, no refund needed |
+| User transfers 200 THB by mistake | Operator enters 200 → user gets 200 credit (bonus 50 stays in wallet) |
+| What if Omise verification takes weeks? | Manual flow is independent, launches immediately |
+| Future themes / day passes need pricing logic | Credit is generic — anything can be priced in credit |
+| Stripe vs Omise — multiple ledgers | One ledger, multiple providers feed in (future) |
+
+The single ledger ([`credit_ledger`](/documentation/architecture/data-model/))
+becomes the source of truth for all monetization. Providers (manual PromptPay
+now, Omise later) just feed credit *into* the ledger; downstream
+spend (premium, future themes, etc.) draws *from* it.
+
+## Conversion math
+
+- **1 credit = 1 THB** (1:1, no bonus tiering)
+- Credit stored internally as satang (1 THB = 100 satang) to avoid
+  floating-point money math
+- Default premium bundle prices (configurable in admin `/settings`):
+
+| Bundle | Credit |
+|---|---|
+| 1 month  | 150 |
+| 3 months | 450 |
+| 6 months | 900 |
+| 12 months | 1800 |
+
+Flat pricing (no bulk discount) by default — admin can change to add a
+discount curve any time without code change.
+
+## Provider status
+
+| Provider | Status | Role |
+|---|---|---|
+| **Manual PromptPay** | ✅ Active | Primary cash inflow path. Operator-reviewed. |
+| **Omise PromptPay / TrueMoney** | 💤 Coming Soon | UI displayed but disabled. Pending Thai business verification (KYC ~1 month). Post-KYC will be refactored to feed credit ledger (same model as manual). |
+| **Stripe** | 💤 Dormant | Code preserved, env empty → 503. Reserved for future card-based subscription tier if demand emerges. |
+
+## Why operator-reviewed?
+
+**Honest accounting.** When operator enters the actual amount visible on
+the slip:
+- No refund mechanic required (eliminates "Anda transfer 100, kami ingin 150" UX dance)
+- No automated provider integration needed for primary flow
+- Client controls cash inflow timing (review 1–24h SLA acceptable for non-time-sensitive top-up)
+- Edge cases (typo, wrong amount, fake slips) get human judgment
+
+**Cost of this choice**: operator workload scales with user growth. We
+plan to flip to Omise auto-payment as the primary path once KYC is done.
+Manual flow then becomes a backup/fallback option.
+
+## Premium redemption — grant stacking
+
+The stacking math (from `services/premium_redemption.ts`):
 
 ```ts
-const stackStart = currentExpiryMs > now.getTime() ? currentExpiryMs : nowMs;
-const grantEnds = stackStart + grantDays * 24 * 60 * 60 * 1000;
+const baseMs = Math.max(currentExpiryMs, now.getTime());
+return addMonthsIso(new Date(baseMs).toISOString(), bundleMonths);
 ```
 
 So:
-- If user pays while expired (or never paid): new expiry = `now + 30 days`
-- If user pays while still premium: new expiry = `current_expiry + 30 days`
+- Redeem while free / expired: new expiry = `now + N months`
+- Redeem while still premium: new expiry = `current_expiry + N months`
 
-The user **never loses days**. They can buy two months ahead and the
-expiry pushes 60 days from current.
+The user **never loses days**. They can stack 2 months upfront and the
+expiry pushes 60 days from current expiry.
 
-LIFF mirrors this math in `lib/premium.ts` `computeProjectedExpiry()` so the
-"วันหมดอายุใหม่จะเป็น 11 ส.ค. 2569" preview shows the correct date BEFORE
-the user pays.
+LIFF marketplace UI shows the projected expiry so users see "หมดอายุ
+ใหม่ 11 ก.ย. 2569" before they confirm.
 
-## Payment provider strategy
+## Revoke flow (operator made a mistake)
 
-| Provider | Status | Reason |
-|---|---|---|
-| **Omise** | ✅ Active | Native Thailand provider, lower fee (~3.65% vs Stripe's 4.65%), supports PromptPay + TrueMoney natively |
-| **Stripe** | 💤 Dormant | Code preserved (services + routes), env empty → graceful 503. Worth keeping for future SaaS subscription model |
+Sometimes an operator approves a payment that turns out to be invalid
+(fake slip, duplicate, charge-back, etc.). Superadmin can **revoke**
+an approved payment from `/payments/:id` in the admin dashboard.
 
-The `subscriptions` table is Stripe-only; the `payments` table is
-Omise-only. This keeps semantics clean: Stripe = ongoing relationship,
-Omise = discrete transactions.
+What happens:
+1. Compensating ledger entry `revoke_topup` deducts the credit
+2. If user already spent the credit on premium, balance hits 0 (no
+   negative balance allowed). User keeps the premium they already
+   redeemed — superadmin can manually revert via `/users/:id` if needed.
+3. `manual_payments.status` flips to `revoked` (audit visible)
+4. Operator records a reason
 
-## Methods supported
+Revoke is **superadmin only** — operators cannot undo their own
+approvals.
 
-| Method | UX | Backend `source.type` | Auto-renew? |
-|---|---|---|---|
-| **PromptPay QR** | In-LIFF modal with QR + countdown + polling | `promptpay` | ❌ Manual each time |
-| **TrueMoney Wallet** | Redirect to Omise authorize page → TrueMoney app deep-link | `truemoney_jumpapp` | ❌ Manual each time |
+## Where the slip files live
 
-**NOT supported** (could be added):
-- Credit/Debit Card (would need Omise's Schedule API for true auto-renew —
-  scoped out of v1)
-- Internet banking (less popular than PromptPay)
-- Rabbit LINE Pay (deferred — overlap with LINE ecosystem might confuse)
+Uploaded slips are stored on the **Railway volume** at `/data/slips/`
+(prod) or `./data/slips/` (dev). Each slip filename is a random UUID +
+the extension matching its mime type.
 
-## Idempotency
+The DB row in `manual_payments` carries `slip_file_path`,
+`slip_mime_type`, `slip_size_bytes`. Both user and admin can fetch the
+slip via authenticated routes (different routes, same source file).
 
-Payments table has UNIQUE `(provider, provider_charge_id)`. Webhook handler
-in `services/omise.ts` `handleOmiseEvent()` checks
-`payment.status === 'successful'` and early-returns if already processed.
+## Going deeper
 
-Same event delivered twice (Omise retries on non-2xx, sometimes delivers
-duplicates) is safe — second delivery is a no-op.
+- [Credit system](/documentation/payments/credit-system/) — ledger
+  schema, source types, the `applyCreditMutation` atomic transaction
+- [Manual top-up flow](/documentation/payments/manual-topup/) — full
+  user + operator user flow, edge cases, abuse handling
+- [Webhook signature](/documentation/payments/webhook-signature/) —
+  HMAC details for Omise (still relevant for the dormant code that will
+  reactivate post-KYC)
+- [Omise integration](/documentation/payments/omise/) — Omise client
+  implementation (currently dormant, ready to reactivate)
 
-## Webhook flow
-
-```
-PromptPay scan / TrueMoney auth
-  │
-  ▼
-Omise records payment
-  │
-  ▼
-Omise fires charge.complete webhook
-  │
-  ▼
-POST /webhooks/omise on backend
-  │
-  ├──→ verifyOmiseSignature() against Omise-Signature header
-  │     (HMAC-SHA256 of `${timestamp}.${rawBody}` using base64-decoded secret)
-  │
-  ├──→ parseOmiseWebhookEvent() validates shape
-  │
-  ├──→ Respond 200 immediately
-  │
-  └──→ Async handleOmiseEvent():
-        - Find payment row by charge_id
-        - If status already 'successful', return (idempotent)
-        - Otherwise: mark successful, compute grant window, applyPremium on user
-```
-
-See [Webhook signature](/documentation/payments/webhook-signature/) for the
-HMAC details (and the lesson learned from initially assuming Basic Auth).
-
-## Polling fallback
-
-Webhooks can be delayed or missed. LIFF polls
-`GET /api/v1/billing/omise/charge/:id` every 2 seconds while the PromptPay
-modal is open. If still `pending` AND Omise is configured, the route also
-calls `syncChargeFromOmise()` which retrieves the current state from Omise
-directly and applies grant if successful.
-
-This means even if the webhook never arrives, the user still gets premium
-extended within a few seconds of the poll detecting success at Omise.
-
-## Going live
-
-TEST mode (currently active) lets us fully simulate flows without real
-money:
-- TEST `pkey_test_*` + `skey_test_*` keys from Omise dashboard
-- PromptPay QR rendered with "TEST MODE" overlay
-- TrueMoney redirects to Omise's authorize SIMULATOR page (3 buttons:
-  Successful / Failed / Pending)
-- Webhooks fire normally
-
-LIVE mode requires:
-1. Omise business verification approved (Thai docs: ภพ.20, DBD, bank, ID)
-2. PromptPay + TrueMoney methods enabled in Omise dashboard
-3. TrueMoney provider approval (separate, +7-14 days lag possible)
-4. LIVE API keys (`pkey_*` + `skey_*` without `_test_`) set in Railway env
-5. LIVE webhook secret in Railway env
-
-**No code change** between TEST and LIVE — just env values.
-
-See [Omise integration](/documentation/payments/omise/) for the full
-integration details.
-
-## Cost model
+## Cost model (manual top-up)
 
 | Item | Cost |
 |---|---|
-| Pricing | 150 THB / 30 days |
-| Omise fee | ~3.65% (Thai cards/PromptPay/TrueMoney) |
-| Net per payment | ~145 THB |
-| OpenAI marginal | ~$0.004/user/day max if cap (20 questions × $0.0002) |
-| Net margin | ~140 THB / user / month at full premium quota use |
+| User transfers via PromptPay | **0 THB fee** (PromptPay is free in Thailand for personal accounts) |
+| Operator time to review | ~30 sec / submission once workflow is muscle memory |
+| Backend cost | Negligible (one DB write, one ledger entry, one push notification) |
+| **Net per top-up** | ~100% of user payment retained |
 
-When TrueMoney has higher fees (e.g. specific bank), check with Omise rep
-for exact rates.
+When Omise auto-payment is reactivated post-KYC, fees will be:
+- PromptPay via Omise: ~3.65%
+- TrueMoney Wallet: ~3.65% (varies)
+- Net ~96% retained
+
+The manual model retains 100% but requires operator time. Trade-off.
 
 ## Future ideas
 
-- **Annual plan** with discount — would need different `grant_days` per
-  product
-- **PromptPay X / TrueMoney Pro tiers** if usage data justifies
-- **Recurring auto-charge via card** if user demand emerges — would
-  re-enable Stripe (since Omise's Schedule API has Thai-market quirks)
+- **Bulk discount tiers** at admin's discretion (e.g. 12 mo = 1500 credit
+  instead of 1800) — change one row in `system_settings`
+- **Day Pass** (25 credit = 1 day) for trial users
+- **Themes & cosmetics** purchasable with credit
+- **Streak milestone bonus credit** (auto-grant on hitting 7 / 30 / 100
+  day streaks) — needs client approval before implementing
+- **Gift credit to another user** — would need recipient lookup + UX
+- **Annual plan promotion** with PromptPay + a discount

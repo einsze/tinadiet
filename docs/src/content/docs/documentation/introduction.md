@@ -35,9 +35,10 @@ is a monorepo:
 ```
 tinadiet/
 ├── projects/
-│   ├── backend/      Express + better-sqlite3 + LINE SDK + OpenAI + Omise
-│   ├── liff/         Vite + React + Tailwind, deployed to Cloudflare Workers
-│   ├── docs/         Astro Starlight (this site)
+│   ├── backend/      Express + better-sqlite3 + LINE SDK + OpenAI + Omise + bcryptjs
+│   ├── liff/         Vite + React + Tailwind (rose-pink brand), Cloudflare Workers
+│   ├── admin/        Vite + React + Tailwind (blue brand), Cloudflare Workers
+│   ├── docs/         Astro Starlight (this site), Cloudflare Pages
 │   └── ops/          Operational runbooks (markdown only, no deploy)
 └── README.md
 ```
@@ -56,13 +57,16 @@ git history but have separate `package.json` and dependency trees.
 | Validation | Zod 4 | All API inputs |
 | Session | `jsonwebtoken` | HS256 over `SESSION_JWT_SECRET` |
 | AI | OpenAI SDK v6 (`gpt-4o-mini`, `gpt-4o`) | Strict JSON schema for parsers |
-| Payments | Omise REST (no SDK) | Stripe code dormant |
-| Frontend | Vite 5 + React 18 + Tailwind 3 | `@line/liff` v2 |
-| Routing | `react-router-dom` v6 | Multi-page LIFF |
+| Payments | Manual PromptPay top-up → credit ledger | Omise dormant (Coming Soon), Stripe dormant |
+| QR generation | `promptpay-qr` + `qrcode` npm libs | Server-renders PromptPay QR with amount baked in |
+| Admin auth | `bcryptjs` + JWT (8h, separate audience) | Independent from user LIFF JWT |
+| Frontend | Vite 5 + React 18 + Tailwind 3 | `@line/liff` v2 (LIFF only) |
+| Routing | `react-router-dom` v6 | Multi-page LIFF + Admin |
 | Icons | `lucide-react` | Match Rich Menu style |
 | Cron | `node-cron` | Daily summary, weekly summary, expire premium |
-| Hosting (backend) | Railway (Singapore, Hobby) | Volume mounted at `/data` |
-| Hosting (LIFF) | Cloudflare Workers Static Assets | SPA fallback config |
+| Hosting (backend) | Railway (Singapore, Hobby) | Volume mounted at `/data` (DB + slip uploads) |
+| Hosting (LIFF) | Cloudflare Workers Static Assets | `app.tinadiet.com`, SPA fallback config |
+| Hosting (admin) | Cloudflare Workers Static Assets | `admin.tinadiet.com`, separate project |
 | Hosting (docs) | Cloudflare Pages | Astro + Starlight |
 | Registrar | Cloudflare Registrar | `tinadiet.com` |
 
@@ -80,12 +84,20 @@ discussion:
 3. **Profile-gated onboarding.** No AI features (food parsing, coaching,
    consultation) until the user completes the profile form and we can
    compute BMR/TDEE.
-4. **Manual-renew payment model.** Premium does NOT auto-charge. User pays
-   PromptPay QR or TrueMoney each month. Stripe code is preserved but
-   currently dormant.
-5. **Premium expiry stacks.** Paying when still premium adds days to the
-   current expiry, not from "now" — no day is ever lost. See
+4. **Credit-based monetization.** Users top up credit via manual PromptPay
+   transfer (operator-reviewed) and then **redeem** credit for premium
+   bundles (1/3/6/12 months). Omise auto-payment code stays dormant for
+   now ("Coming Soon" in UI), pending Thai business verification. See
    [Payments overview](/documentation/payments/overview/).
+5. **Operator review for top-up.** Slip upload + manual review is the
+   primary cash inflow path. Operators enter the *actual* amount they
+   see on the slip — eliminates over/under-payment edge cases by design.
+6. **Premium expiry stacks.** Redeeming premium when still premium adds
+   days to the current expiry, not from "now" — no day is ever lost.
+7. **Audit-trail everything.** Every credit mutation logs to
+   `credit_ledger` with `balance_after_satang` for reconciliation.
+   Operators can revoke approvals (with reason), and the revoke creates
+   a compensating ledger entry — never destructive edits.
 
 ## Where to next
 

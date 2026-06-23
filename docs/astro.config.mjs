@@ -48,6 +48,10 @@ export default defineConfig({
           autogenerate: { directory: 'documentation/liff' },
         },
         {
+          label: 'Admin Dashboard',
+          autogenerate: { directory: 'documentation/admin' },
+        },
+        {
           label: 'Payments',
           autogenerate: { directory: 'documentation/payments' },
         },

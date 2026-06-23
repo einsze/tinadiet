@@ -5,9 +5,10 @@ sidebar:
   order: 1
 ---
 
-Tina Diet has two user-facing surfaces (LINE bot chat + LIFF web app) sharing
-one backend, with SQLite for state and three external services for AI,
-payment, and event delivery.
+Tina Diet has **two user-facing surfaces** (LINE bot chat + LIFF web app)
+plus an **operator-facing admin dashboard**, all sharing one Express
+backend with SQLite for state. External services: OpenAI for AI, Omise
+for payment (currently dormant), and LINE for messaging + auth.
 
 ## System diagram
 
@@ -29,21 +30,25 @@ payment, and event delivery.
                   │   (Thai phone)  │    │  │  /webhook/line           │   │
                   └────────┬────────┘    │  │  /webhooks/omise         │   │
                            │             │  │  /api/v1/*               │   │
-                  ┌────────▼────────┐    │  │  /internal/jobs/*        │   │
-                  │   LIFF app      │    │  └────────┬─────────────────┘   │
-                  │ app.tinadiet.com│───▶│           │                     │
-                  │ (Cloudflare     │    │  ┌────────▼────────┐            │
-                  │   Workers)      │    │  │ better-sqlite3  │            │
-                  └─────────────────┘    │  │ /data/app.db    │            │
-                                         │  │ (volume)        │            │
-                                         │  └─────────────────┘            │
-                                         └────────────────▲────────────────┘
-                                                          │webhook
-                                                ┌─────────┴────────┐
-                                                │  Omise API       │
-                                                │  PromptPay +     │
-                                                │  TrueMoney       │
-                                                └──────────────────┘
+                  ┌────────▼────────┐    │  │  /api/v1/admin/*         │   │
+                  │   LIFF app      │    │  │  /internal/jobs/*        │   │
+                  │ app.tinadiet.com│───▶│  └────────┬─────────────────┘   │
+                  │ (Cloudflare     │    │           │                     │
+                  │   Workers)      │    │  ┌────────▼────────┐            │
+                  └─────────────────┘    │  │ better-sqlite3  │            │
+                                         │  │ /data/app.db    │            │
+                  ┌─────────────────┐    │  │ + /data/slips/  │            │
+                  │  Admin app      │───▶│  │ (volume)        │            │
+                  │ admin.tinadiet  │    │  └─────────────────┘            │
+                  │   .com          │    │                                 │
+                  │ (Cloudflare     │    └────────────────▲────────────────┘
+                  │   Workers)      │                     │webhook (dormant)
+                  └─────────────────┘            ┌────────┴─────────┐
+                  (operators only)               │  Omise API       │
+                                                 │  PromptPay +     │
+                                                 │  TrueMoney       │
+                                                 │  (dormant — KYC) │
+                                                 └──────────────────┘
 ```
 
 ## Components
@@ -61,6 +66,17 @@ payment, and event delivery.
   LIFF SDK
 - Exchanges `lineUserId` for a backend session JWT at `/api/v1/auth/exchange`
 - All subsequent API calls authenticate with `Authorization: Bearer <jwt>`
+
+### Admin dashboard
+- A separate React SPA hosted at `admin.tinadiet.com` (Cloudflare Workers
+  Static Assets, **different project** from LIFF)
+- Email + password login (bcrypt-verified) → 8h JWT with `audience='admin'`
+- Operators review manual top-up slips, superadmins also manage settings,
+  users, and admin accounts
+- Backend routes prefixed `/api/v1/admin/*`, gated by `requireAdmin` and
+  `requireSuperadmin` middleware
+- Workers.dev URL is disabled — only the custom domain serves the dashboard
+  (security hardening, see [Admin overview](/documentation/admin/overview/))
 
 ### Backend (Railway)
 - Single Express process, Node 22 ESM, `tsx watch` for dev
@@ -104,23 +120,82 @@ payment, and event delivery.
 7. Backend asks for proactive meal suggestion via `coach.ts` (also OpenAI)
 8. Backend replies to LINE with confirmation + suggestion in single message
 
-## Data flow: payment (Omise PromptPay)
+## Data flow: manual top-up + redeem premium (current primary path)
 
-1. User taps "Premium" in LIFF Rich Menu → PremiumSection
-2. User picks PromptPay, taps "ชำระ 150 ฿"
-3. LIFF POST `/api/v1/billing/omise/charge` body `{method:"promptpay"}`
-4. Backend calls Omise API `POST /charges` with source.type=promptpay
-5. Omise creates charge, returns `qr_image_uri`
-6. Backend inserts `payments` row (status=pending), returns charge to LIFF
-7. LIFF shows QR modal with countdown + polls `GET /omise/charge/:id` every
-   2 seconds
-8. Meanwhile Omise fires `charge.create` webhook → backend ACKs (no grant)
-9. User scans QR in bank app, pays
-10. Omise fires `charge.complete` webhook with HMAC signature
-11. Backend verifies signature, marks payment successful, extends
-    `users.premium_expires_at` (stacks if user was already premium)
-12. LIFF polling sees new status → modal transitions to success → reload
-    billing status
+```
+LIFF /premium
+  │
+  ▼ tap "Top up credit"
+LIFF /premium/topup  (pick method: Manual PromptPay)
+  │
+  ▼ tap Manual
+LIFF /premium/topup/manual  (pick amount: 50 / 100 / ... / custom)
+  │
+  ▼ POST /api/v1/topup/manual/start { amount_thb }
+Backend:
+  - Validate (not blocked, amount in [min, max], no existing pending)
+  - INSERT manual_payments row (status='awaiting_slip')
+  - Call promptpay-qr lib → EMVCo payload → QRCode.toDataURL → PNG
+  - Return { payment_id, qr_data_url, receiver_name }
+  │
+  ▼ display QR + amount
+User opens bank app (Kasikorn / SCB / Krungthai / ...) → scans QR
+  → confirms amount → transfers
+  │
+  ▼ user returns to LIFF
+LIFF: tap "I have transferred" → file picker → upload slip
+  │
+  ▼ POST /api/v1/topup/manual/:id/upload-slip (multipart)
+Backend:
+  - Multer validates (MIME, size ≤ 5 MB)
+  - Save to /data/slips/<uuid>.<ext>
+  - UPDATE manual_payments status='pending' + slip metadata
+  │
+  ▼ submission visible to operator
+Operator at admin.tinadiet.com /payments/pending  (FIFO list)
+  │
+  ▼ open submission detail
+Backend GET /admin/payments/:id/slip
+  - Authenticated stream the slip image
+  │
+  ▼ operator reviews slip + cross-checks bank statement
+Operator clicks Approve, enters actual_amount_satang
+  │
+  ▼ POST /api/v1/admin/payments/:id/approve { actual_amount_satang, ... }
+Backend tx:
+  - Mark manual_payments status='approved' + credit_granted_satang
+  - applyCreditMutation(+actual_amount, source_type='manual_topup')
+    → users.credit_balance_satang += amount
+    → credit_ledger row INSERT
+  - (optional) record abuse flag
+  - Return success
+  │
+  ▼ user sees credit in LIFF /premium "My Wallet"
+  ▼ user taps "Redeem Premium 1 month (150 credit)"
+  │
+  ▼ POST /api/v1/premium/redeem { months: 1 }
+Backend tx:
+  - applyCreditMutation(-priceCredit, source_type='redeem_premium')
+  - Compute newExpiry = max(now, current_expiry) + months
+  - userRepository.applyPremium(userId, newExpiry)
+  - Return { new_premium_expires_at, credit_balance_satang }
+  │
+  ▼ LIFF shows "Premium active until …"
+```
+
+See [Manual top-up flow](/documentation/payments/manual-topup/) for full
+operator workflow + edge cases.
+
+## Data flow: payment (Omise PromptPay — currently dormant)
+
+The original Omise direct-charge flow is preserved in code (env empty
+→ graceful 503) and will reactivate post-KYC. When that happens, the
+plan is to refactor the webhook handler to feed the `credit_ledger`
+(source_type='omise_topup') instead of granting premium directly.
+
+Until then, see git history at `services/omise.ts` for the legacy flow
+implementation. The LIFF "Auto-payment (Omise) — Coming Soon" card on
+the topup method picker is the user-facing reminder.
 
 ## Where things live
 

@@ -12,35 +12,39 @@ managed by versioned migrations in `backend/src/db/migrations.ts`.
 ## Tables
 
 ### `users`
-Primary aggregate. Tracks identity, profile, computed goals, and plan.
+Primary aggregate. Tracks identity, profile, computed goals, plan, and
+credit balance.
 
 ```sql
 CREATE TABLE users (
-  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-  line_user_id        TEXT NOT NULL UNIQUE,
-  display_name        TEXT,
-  gender              TEXT CHECK(gender IN ('male','female','other')),
-  date_of_birth       TEXT,
-  height_cm           REAL,
-  current_weight_kg   REAL,
-  target_weight_kg    REAL,
-  activity_level      TEXT CHECK(activity_level IN
-                        ('sedentary','light','moderate','active','very_active')),
-  goal_type           TEXT CHECK(goal_type IN ('loss','maintain','gain')),
-  bmr_kcal            REAL,
-  tdee_kcal           REAL,
-  daily_calorie_goal  REAL,
-  daily_protein_g     REAL,
-  daily_carbs_g       REAL,
-  daily_fat_g         REAL,
-  locale              TEXT NOT NULL DEFAULT 'th-TH',
-  timezone            TEXT NOT NULL DEFAULT 'Asia/Bangkok',
-  plan                TEXT NOT NULL DEFAULT 'free' CHECK(plan IN ('free','premium')),
-  premium_expires_at  TEXT,
-  stripe_customer_id  TEXT,
-  omise_customer_id   TEXT,
-  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+  id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+  line_user_id           TEXT NOT NULL UNIQUE,
+  display_name           TEXT,
+  gender                 TEXT CHECK(gender IN ('male','female','other')),
+  date_of_birth          TEXT,
+  height_cm              REAL,
+  current_weight_kg      REAL,
+  target_weight_kg       REAL,
+  activity_level         TEXT CHECK(activity_level IN
+                           ('sedentary','light','moderate','active','very_active')),
+  goal_type              TEXT CHECK(goal_type IN ('loss','maintain','gain')),
+  bmr_kcal               REAL,
+  tdee_kcal              REAL,
+  daily_calorie_goal     REAL,
+  daily_protein_g        REAL,
+  daily_carbs_g          REAL,
+  daily_fat_g            REAL,
+  locale                 TEXT NOT NULL DEFAULT 'th-TH',
+  timezone               TEXT NOT NULL DEFAULT 'Asia/Bangkok',
+  plan                   TEXT NOT NULL DEFAULT 'free' CHECK(plan IN ('free','premium')),
+  premium_expires_at     TEXT,
+  stripe_customer_id     TEXT,
+  omise_customer_id      TEXT,
+  credit_balance_satang  INTEGER NOT NULL DEFAULT 0,     -- added 0008
+  abuse_warning_count    INTEGER NOT NULL DEFAULT 0,     -- added 0008
+  is_blocked             INTEGER NOT NULL DEFAULT 0,     -- added 0008
+  created_at             TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at             TEXT NOT NULL DEFAULT (datetime('now'))
 );
 ```
 
@@ -49,6 +53,13 @@ CREATE TABLE users (
   See `domain/profile.ts` `isProfileComplete()`.
 - `plan='premium' AND premium_expires_at > now` is the canonical "is
   premium" check. See `domain/profile.ts` `isPremium()`.
+- `credit_balance_satang` is the user's wallet. Read-only for application
+  code outside `services/credit.ts` — mutations only via
+  `applyCreditMutation`. See [Credit system](/documentation/payments/credit-system/).
+- `abuse_warning_count` increments per operator-flagged submission. 3+ →
+  future submissions auto-route to superadmin review. 5+ → user blocked.
+- `is_blocked` set automatically at 5 warnings, or manually by superadmin.
+  When 1, user cannot create new top-ups (`USER_BLOCKED` error).
 - `stripe_customer_id` reserved for future use; Stripe code is dormant.
 
 ### `food_logs`
@@ -191,21 +202,187 @@ CREATE TABLE payments (
 - `grant_starts_at` / `grant_ends_at` capture the stacking computation at
   the time of grant.
 
+### `admin_users` (Sprint 6 M4)
+Operator + superadmin login + audit. Separate from `users` because admin
+auth is independent (email + bcrypt password) from user auth (LINE Login).
+
+```sql
+CREATE TABLE admin_users (
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  email                TEXT    NOT NULL UNIQUE,
+  password_hash        TEXT    NOT NULL,                  -- bcrypt cost 10
+  display_name         TEXT    NOT NULL,
+  role                 TEXT    NOT NULL CHECK(role IN ('superadmin','operator')),
+  is_active            INTEGER NOT NULL DEFAULT 1,
+  last_login_at        TEXT,
+  created_by_admin_id  INTEGER REFERENCES admin_users(id),
+  created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_at           TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+```
+
+**Notes**
+- Migration 0008 seeds 2 superadmin rows for the project owner. Both
+  passwords MUST be rotated before public launch (see [Admin
+  overview](/documentation/admin/overview/)).
+- `created_by_admin_id` references admin_users itself (NULL for seeded
+  rows). Self-FK is intentional for audit ("who created which operator").
+- Deactivate (`is_active=0`) rather than delete — keeps audit links on
+  past payment reviews intact.
+
+### `manual_payments` (Sprint 6 M4)
+One row per top-up submission. Lifecycle:
+`awaiting_slip → pending → approved | rejected | revoked`.
+
+```sql
+CREATE TABLE manual_payments (
+  id                         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id                    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  requested_amount_satang    INTEGER NOT NULL,
+  actual_amount_satang       INTEGER,                    -- set at approve, from slip
+  slip_file_path             TEXT,                       -- /data/slips/<uuid>.<ext>
+  slip_mime_type             TEXT,
+  slip_size_bytes            INTEGER,
+  status                     TEXT    NOT NULL DEFAULT 'awaiting_slip'
+                               CHECK(status IN
+                                 ('awaiting_slip','pending','approved',
+                                  'rejected','flagged_review','revoked')),
+  reviewed_by_admin_id       INTEGER REFERENCES admin_users(id),
+  reviewed_at                TEXT,
+  rejection_reason           TEXT,
+  admin_notes                TEXT,
+  flag_user_as_abuse         INTEGER NOT NULL DEFAULT 0,
+  credit_granted_satang      INTEGER,                    -- = actual_amount on approve
+  revoked_by_admin_id        INTEGER REFERENCES admin_users(id),
+  revoked_at                 TEXT,
+  revoke_reason              TEXT,
+  created_at                 TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_at                 TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+```
+
+**Notes**
+- `actual_amount_satang` can differ from `requested_amount_satang` —
+  operator records what's actually on the slip (eliminates refund
+  edge cases).
+- `flagged_review` status means "needs superadmin review" — auto-promoted
+  by the approve handler when amount ≥ `high_value_threshold_satang` and
+  the calling operator isn't superadmin.
+- `revoked` is terminal; once revoked, ledger has a compensating
+  `revoke_topup` entry deducting the granted credit.
+- Slip files at `slip_file_path` are stored on the Railway volume (not in
+  DB). See [Manual top-up flow](/documentation/payments/manual-topup/).
+
+### `credit_ledger` (Sprint 6 M4)
+Immutable audit log of every credit mutation. Source of truth for
+reconciliation. See [Credit system](/documentation/payments/credit-system/)
+for the full design.
+
+```sql
+CREATE TABLE credit_ledger (
+  id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id               INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  amount_satang         INTEGER NOT NULL,                -- signed: + earn, - spend
+  balance_after_satang  INTEGER NOT NULL,                -- snapshot
+  source_type           TEXT    NOT NULL CHECK(source_type IN (
+                          'manual_topup','omise_topup','admin_grant',
+                          'redeem_premium','revoke_topup','revoke_redeem')),
+  source_ref_id         INTEGER,
+  admin_user_id         INTEGER REFERENCES admin_users(id),
+  note                  TEXT,
+  created_at            TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+```
+
+**Notes**
+- **Never UPDATE.** Corrections happen via compensating entries.
+- `balance_after_satang` lets you read the user's balance at any
+  historical point with a single row lookup — no replay needed.
+- All inserts go through `services/credit.ts::applyCreditMutation` inside
+  a SQLite transaction that also updates `users.credit_balance_satang`.
+
+### `user_flags` (Sprint 6 M4)
+Audit log of abuse warnings + manual blocks per user.
+
+```sql
+CREATE TABLE user_flags (
+  id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id                  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  flag_type                TEXT    NOT NULL CHECK(flag_type IN
+                             ('abuse_warning','manual_block')),
+  reason                   TEXT,
+  related_payment_id       INTEGER REFERENCES manual_payments(id),
+  flagged_by_admin_id      INTEGER NOT NULL REFERENCES admin_users(id),
+  flagged_at               TEXT    NOT NULL DEFAULT (datetime('now')),
+  cleared_by_admin_id      INTEGER REFERENCES admin_users(id),
+  cleared_at               TEXT,
+  clear_reason             TEXT
+);
+```
+
+**Notes**
+- Multiple rows per user are normal (each flag is its own audit entry).
+  `users.abuse_warning_count` is the cached count of un-cleared flags.
+- Superadmin clearing flags sets `cleared_at` + resets `abuse_warning_count`
+  to 0 in a single transaction.
+- `related_payment_id` is nullable (some flags may be unrelated to a
+  specific submission, e.g. retroactive flag after offline complaint).
+
+### `system_settings` (Sprint 6 M4)
+Key-value singleton config table. Editable via admin dashboard.
+
+```sql
+CREATE TABLE system_settings (
+  key                   TEXT    PRIMARY KEY,
+  value                 TEXT    NOT NULL,
+  updated_by_admin_id   INTEGER REFERENCES admin_users(id),
+  updated_at            TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+```
+
+Seeded keys (default values in parens):
+- `promptpay_id` (empty) — must be configured before first top-up
+- `promptpay_id_type` (`mobile`)
+- `promptpay_receiver_name` (empty)
+- `price_1mo_credit` (`150`), `price_3mo_credit` (`450`), `price_6mo_credit` (`900`), `price_12mo_credit` (`1800`)
+- `high_value_threshold_satang` (`500000` = 5,000 THB)
+- `topup_min_satang` (`5000`), `topup_max_satang` (`500000`)
+
+All values are strings; consumers parse to number as needed.
+`updated_by_admin_id` provides audit ("who last changed this setting").
+
 ## Relationships
 
 ```
 users (id)
   │
-  ├── food_logs.user_id      (ON DELETE CASCADE)
-  ├── weight_logs.user_id    (ON DELETE CASCADE)
-  ├── chat_messages.user_id  (ON DELETE CASCADE)
-  ├── subscriptions.user_id  (ON DELETE CASCADE)
-  └── payments.user_id       (ON DELETE CASCADE)
+  ├── food_logs.user_id          (ON DELETE CASCADE)
+  ├── weight_logs.user_id        (ON DELETE CASCADE)
+  ├── chat_messages.user_id      (ON DELETE CASCADE)
+  ├── subscriptions.user_id      (ON DELETE CASCADE)
+  ├── payments.user_id           (ON DELETE CASCADE)
+  ├── manual_payments.user_id    (ON DELETE CASCADE)
+  ├── credit_ledger.user_id      (ON DELETE CASCADE)
+  └── user_flags.user_id         (ON DELETE CASCADE)
+
+admin_users (id)
+  ├── admin_users.created_by_admin_id (self-FK, NULL for seeded)
+  ├── manual_payments.reviewed_by_admin_id
+  ├── manual_payments.revoked_by_admin_id
+  ├── credit_ledger.admin_user_id
+  ├── user_flags.flagged_by_admin_id
+  ├── user_flags.cleared_by_admin_id
+  └── system_settings.updated_by_admin_id
+
+manual_payments (id)
+  └── user_flags.related_payment_id   (nullable)
 ```
 
 Deleting a user via account-delete (`POST /api/v1/account/delete` with
-PDPA flow) cascades everything. See
-`routes/api/account.ts`.
+PDPA flow) cascades all per-user tables including credit_ledger,
+manual_payments, and user_flags. The slip files at
+`slip_file_path` are NOT deleted by the CASCADE — they'd become orphans
+on the volume. Acceptable for now; add a cron sweeper if it grows.
 
 ## Index strategy
 
@@ -220,6 +397,12 @@ PDPA flow) cascades everything. See
 - `idx_payments_provider_charge` UNIQUE — Omise webhook idempotency
 - `idx_payments_user_created` — payment history per user
 - `idx_payments_status_expires` — pending charge cleanup queries
+- `idx_admin_users_email` — login lookup
+- `idx_manual_payments_user_created` — user submission history
+- `idx_manual_payments_status_created` — operator FIFO pending list
+- `idx_credit_ledger_user_created` — wallet history view (DESC)
+- `idx_credit_ledger_source` — "show all ledger entries from payment #N"
+- `idx_user_flags_user` — abuse history per user
 
 ## Conventions
 
