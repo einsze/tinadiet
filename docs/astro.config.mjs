@@ -76,6 +76,16 @@ export default defineConfig({
             content: '#ec4571',
           },
         },
+        // Defense-in-depth: tell search engines NOT to index the dev docs.
+        // (Cloudflare Access is the primary gate; this catches anything that
+        // slips through and discourages incidental SEO surfacing.)
+        {
+          tag: 'meta',
+          attrs: {
+            name: 'robots',
+            content: 'noindex, nofollow',
+          },
+        },
       ],
     }),
   ],

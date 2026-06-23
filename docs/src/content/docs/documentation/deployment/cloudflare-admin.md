@@ -107,13 +107,11 @@ behavior given those URLs are disabled in production.
 
 After deploy + custom domain active:
 
-1. Open `https://admin.tinadiet.com`
-2. Login with one of the seeded superadmin accounts (passwords in
-   `SECRETS_TINADIET_LOCAL.md` outside the repo):
-   - `send@carvi.click`
-   - `sellerprn25@gmail.com`
-3. Navigate to **`/account`** and **change the password** (the seeded
-   values are weak by design — meant to be rotated immediately)
+1. Open the admin dashboard URL
+2. Login with the seeded superadmin account (credentials kept in the
+   project owner's private secrets file outside the repo)
+3. Navigate to **`/account`** and **change the password** to a
+   high-entropy value (12+ chars, mixed case + symbols)
 4. Navigate to **`/settings`** and configure:
    - `promptpay_id` — the client's PromptPay receiver number (10-digit
      mobile, or 13-digit Tax ID once business is registered)

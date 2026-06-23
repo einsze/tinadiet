@@ -1,7 +1,5 @@
 ---
 const lineAddUrl = 'https://line.me/R/ti/p/@913civqx';
-const docsUrl = '/documentation/introduction/';
-const githubUrl = 'https://github.com/einsze/tinadiet';
 ---
 
 <!doctype html>
@@ -53,7 +51,7 @@ const githubUrl = 'https://github.com/einsze/tinadiet';
           AI-powered food logging, macro tracking & nutrition coaching.
         </p>
 
-        <div class="cta-grid">
+        <div class="cta-grid cta-grid-single">
           <a href={lineAddUrl} class="cta cta-primary" target="_blank" rel="noopener">
             <span class="cta-icon">💬</span>
             <span class="cta-text">
@@ -61,21 +59,10 @@ const githubUrl = 'https://github.com/einsze/tinadiet';
               <span class="cta-hint">Add @913civqx to start</span>
             </span>
           </a>
-          <a href={docsUrl} class="cta cta-secondary">
-            <span class="cta-icon">📖</span>
-            <span class="cta-text">
-              <span class="cta-label">Documentation</span>
-              <span class="cta-hint">For developers</span>
-            </span>
-          </a>
         </div>
       </header>
 
       <footer class="footer">
-        <a href={githubUrl} target="_blank" rel="noopener" class="footer-link">
-          GitHub
-        </a>
-        <span class="dot">·</span>
         <a href="https://app.tinadiet.com/privacy" target="_blank" rel="noopener" class="footer-link">
           Privacy
         </a>
@@ -211,6 +198,7 @@ const githubUrl = 'https://github.com/einsze/tinadiet';
       }
       @media (min-width: 540px) {
         .cta-grid { grid-template-columns: 1fr 1fr; }
+        .cta-grid-single { grid-template-columns: 1fr; max-width: 18rem; }
       }
 
       .cta {

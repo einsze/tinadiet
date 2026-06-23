@@ -42,21 +42,20 @@ This is a NEW Cloudflare Workers project, separate from `tinadiet-liff` and
    - DNS auto-provisioned, SSL active in ~30s
 3. **First deploy**: trigger by pushing to `main` (auto-deploy on push)
 
-## Initial superadmin credentials (created by migration 0008)
+## Initial superadmin credentials
 
-Both have `role=superadmin`. Login at `https://admin.tinadiet.com/login`.
+Migration `0008_credit_system` seeds initial superadmin row(s) for the
+project owner. The actual emails and bcrypt-hashed passwords are baked
+into the migration SQL — see `backend/src/db/migrations.ts`.
 
-| Email | Initial password |
-|---|---|
-| `send@carvi.click` | `ligamas89` |
-| `sellerprn25@gmail.com` | `@Tinaproject5` |
-
-**Rotate via the dashboard `/account` page after first login.**
+**Initial plaintext passwords are kept in the project owner's private
+secrets file outside the repo.** Rotate via `/account` page after first
+login.
 
 ## First-time setup checklist
 
 After deploy:
-1. Login with one of the seeded superadmins
+1. Login with the seeded superadmin
 2. Open `/settings`
 3. Configure:
    - `promptpay_id` — your PromptPay receiver ID (mobile/NID/Tax ID)

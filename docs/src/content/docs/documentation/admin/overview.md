@@ -103,15 +103,14 @@ glance.
 
 ## Initial superadmin seeding
 
-Migration `0008_credit_system` seeds **2 superadmin accounts** with
-bcrypt-hashed initial passwords (passwords stored in
-`SECRETS_TINADIET_LOCAL.md` outside the repo). Both have role
-`superadmin` so the project owner can log in immediately after deploy.
+Migration `0008_credit_system` seeds the initial superadmin row(s) so
+the project owner can log in immediately after deploy. Initial
+credentials are kept in a private secrets file outside the repo
+(maintained by the project owner).
 
-**Mandatory step**: rotate both passwords via `/account` page after
-first login. The seeded passwords are weak by design (memorable for the
-first login) and should be replaced with high-entropy passwords (12+
-chars, mixed case + symbols) before public launch.
+**Mandatory step**: rotate the seeded password via `/account` page
+after first login, then replace with a high-entropy password (12+
+chars, mixed case + symbols).
 
 ## Creating additional operators
 
@@ -148,15 +147,13 @@ Already in place:
 - ✅ Role enforcement at backend (frontend gating is UX only)
 
 Recommended (open):
-- 🟡 Set a SEPARATE `ADMIN_JWT_SECRET` env var in Railway (currently
-  falls back to `SESSION_JWT_SECRET`)
-- 🟡 Rotate seeded superadmin passwords (`ligamas89` / `@Tinaproject5`)
-- 🔵 Add IP allowlist for admin domain via Cloudflare Access (if all
-  operators work from known IPs/VPN)
+- 🟡 Set a SEPARATE `ADMIN_JWT_SECRET` env var (currently can fall back
+  to `SESSION_JWT_SECRET`)
+- 🟡 Rotate seeded superadmin passwords post-deploy
+- 🔵 Restrict admin domain via Cloudflare Access (email allowlist or IP)
 - 🔵 Add TOTP 2FA for admin login (would need new `admin_user_totp_secret`
   column + verify step)
-- 🔵 Rate-limit failed login attempts per email (currently relies on
-  Cloudflare's implicit DDoS protection)
+- 🔵 App-level rate limit on failed login attempts per email
 
 ## Related docs
 
