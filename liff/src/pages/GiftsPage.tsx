@@ -13,6 +13,7 @@ import { giftsApi } from '../api/gifts.js';
 import { useSession } from '../state/session.js';
 import { THEME_META } from '../themes/catalog.js';
 import { shareGift } from '../lib/liff.js';
+import { env } from '../lib/env.js';
 import {
   statusLabel,
   refusedReasonLabel,
@@ -80,7 +81,9 @@ const StatusIcon = ({ status }: { status: GiftStatus }) => {
 };
 
 const buildClaimUrl = (token: string): string => {
-  return `${window.location.origin}/claim/${token}`;
+  // Use LIFF deep link form so LINE auto-opens the LIFF webview (with auth
+  // context) instead of the generic LINE smart browser.
+  return `https://liff.line.me/${env.LIFF_ID}/claim/${token}`;
 };
 
 const SentRow = ({

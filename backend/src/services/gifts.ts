@@ -126,6 +126,12 @@ const validatePayload = (
 };
 
 const buildClaimUrl = (token: string): string => {
+  // Use LIFF deep link form so LINE auto-opens the LIFF webview (with auth
+  // context + ID token available). Direct app.tinadiet.com URLs open LINE's
+  // generic smart browser instead, which has no LIFF context and fails auth.
+  if (env.LIFF_ID.length > 0) {
+    return `https://liff.line.me/${env.LIFF_ID}/claim/${token}`;
+  }
   const base = env.LIFF_URL.replace(/\/$/, '');
   return `${base}/claim/${token}`;
 };

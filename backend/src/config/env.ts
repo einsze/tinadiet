@@ -13,6 +13,7 @@ export const env = {
   TZ: process.env.TZ ?? 'Asia/Bangkok',
   APP_BASE_URL: process.env.APP_BASE_URL ?? 'http://localhost:3000',
   LIFF_URL: process.env.LIFF_URL ?? 'https://app.tinadiet.com',
+  LIFF_ID: process.env.LIFF_ID ?? '',
   COMMIT_SHA: process.env.RAILWAY_GIT_COMMIT_SHA ?? 'local',
 
   LINE_CHANNEL_ID: requireEnv('LINE_CHANNEL_ID'),
