@@ -12,10 +12,7 @@ import { giftsApi } from '../api/gifts.js';
 import { useSession } from '../state/session.js';
 import { formatCredit } from '../types/wallet.js';
 import { THEME_META, type ThemeSlug } from '../themes/catalog.js';
-import {
-  isShareTargetPickerAvailable,
-  shareGiftToLine,
-} from '../lib/liff.js';
+import { shareGift } from '../lib/liff.js';
 import type { GiftPayload, GiftType } from '../types/gift.js';
 
 type Props = {
@@ -127,12 +124,17 @@ export const GiftCreateModal = ({
 
   const handleShare = async () => {
     if (state.kind !== 'created') return;
-    const text = `🎁 ${subjectLabel}\n${
-      message.trim().length > 0 ? `${message.trim()}\n` : ''
-    }`;
-    const result = await shareGiftToLine(text, state.claim_url);
-    if (result === 'unsupported') {
-      void handleCopy();
+    const title = `🎁 ${subjectLabel}`;
+    const text =
+      message.trim().length > 0
+        ? `🎁 ${subjectLabel}\n"${message.trim()}"`
+        : `🎁 ${subjectLabel}`;
+    const result = await shareGift(title, text, state.claim_url);
+    if (result === 'copied') {
+      setCopyDone(true);
+      window.setTimeout(() => setCopyDone(false), 2000);
+    } else if (result === 'unsupported') {
+      window.prompt('คัดลอก link:', state.claim_url);
     }
   };
 
@@ -307,9 +309,7 @@ export const GiftCreateModal = ({
                 className="flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-brand-500 to-amber-500 px-3 py-2 text-xs font-semibold text-white"
               >
                 <Share2 className="h-3.5 w-3.5" />
-                <span>
-                  {isShareTargetPickerAvailable() ? 'แชร์ใน LINE' : 'แชร์'}
-                </span>
+                <span>แชร์</span>
               </button>
             </div>
 

@@ -12,10 +12,7 @@ import {
 import { giftsApi } from '../api/gifts.js';
 import { useSession } from '../state/session.js';
 import { THEME_META } from '../themes/catalog.js';
-import {
-  isShareTargetPickerAvailable,
-  shareGiftToLine,
-} from '../lib/liff.js';
+import { shareGift } from '../lib/liff.js';
 import {
   statusLabel,
   refusedReasonLabel,
@@ -110,11 +107,19 @@ const SentRow = ({
   };
 
   const handleShare = async () => {
-    const text = `🎁 ${describePayload(gift.gift_type, gift.payload)}\n${
-      gift.message ?? ''
-    }`;
-    const result = await shareGiftToLine(text, url);
-    if (result === 'unsupported') void handleCopy();
+    const subject = describePayload(gift.gift_type, gift.payload);
+    const title = `🎁 ${subject}`;
+    const text =
+      gift.message !== null && gift.message.length > 0
+        ? `🎁 ${subject}\n"${gift.message}"`
+        : `🎁 ${subject}`;
+    const result = await shareGift(title, text, url);
+    if (result === 'copied') {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } else if (result === 'unsupported') {
+      window.prompt('Link:', url);
+    }
   };
 
   return (
@@ -168,9 +173,7 @@ const SentRow = ({
               className="flex items-center justify-center gap-1 rounded-md bg-brand-500 px-2 py-1 text-[11px] font-semibold text-white"
             >
               <Share2 className="h-3 w-3" />
-              <span>
-                {isShareTargetPickerAvailable() ? 'แชร์ LINE' : 'แชร์'}
-              </span>
+              <span>แชร์</span>
             </button>
           </div>
           <button
