@@ -16,6 +16,7 @@ import { ThemeShop } from './ThemeShop.js';
 import { walletApi } from '../api/wallet.js';
 import { topupApi } from '../api/topup.js';
 import { premiumApi } from '../api/premium.js';
+import { useSession } from '../state/session.js';
 import type {
   ManualPaymentSubmission,
   ManualPaymentStatus,
@@ -146,6 +147,7 @@ export const PremiumSection = () => {
     null
   );
   const navigate = useNavigate();
+  const { status: sessionStatus, setUser } = useSession();
 
   const load = useCallback(async () => {
     setState({ kind: 'loading' });
@@ -189,6 +191,15 @@ export const PremiumSection = () => {
       setRedeemMessage(
         `แลก Premium ${months} เดือน สำเร็จ! หมดอายุ ${formatDate(res.premium_expires_at)}`
       );
+      // Reactive wallet update: balance display reads from session.user.
+      // setUser propagates new balance immediately; background load() refreshes
+      // ledger entries / is_blocked / etc.
+      if (sessionStatus.kind === 'authenticated') {
+        setUser({
+          ...sessionStatus.user,
+          credit_balance_satang: res.credit_balance_satang,
+        });
+      }
       await load();
     } catch (err) {
       const apiErr = err as { message?: string; code?: string };
@@ -218,7 +229,12 @@ export const PremiumSection = () => {
   }
 
   const { wallet, bundles, submissions } = state.data;
-  const balance = wallet.balance_satang;
+  // Balance source of truth = session user (reactive). Falls back to wallet
+  // state during the brief window when session hydrates after initial mount.
+  const balance =
+    sessionStatus.kind === 'authenticated'
+      ? sessionStatus.user.credit_balance_satang
+      : wallet.balance_satang;
   const balanceLabel = formatCredit(balance);
 
   // We get premium status from /redeem response or from /billing/status, but
@@ -323,8 +339,8 @@ export const PremiumSection = () => {
         </section>
       )}
 
-      {/* Themes marketplace */}
-      <ThemeShop onCreditChange={load} />
+      {/* Themes marketplace — wallet card above is reactive via session.user */}
+      <ThemeShop />
 
       {/* Coming soon: Omise auto-payment */}
       <section className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5">
