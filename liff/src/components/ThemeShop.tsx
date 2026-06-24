@@ -154,7 +154,13 @@ const ThemeCard = ({
   );
 };
 
-export const ThemeShop = () => {
+type Props = {
+  /** Fired after a successful purchase or activate so the parent (e.g.
+   * PremiumSection wallet card) can refresh its own balance display. */
+  onCreditChange?: () => void | Promise<void>;
+};
+
+export const ThemeShop = ({ onCreditChange }: Props = {}) => {
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [busySlug, setBusySlug] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
@@ -216,6 +222,7 @@ export const ThemeShop = () => {
         text: `ปลดล็อกธีม "${THEME_META[slug].name_th}" สำเร็จ! ใช้งานทันที ✨`,
       });
       await load();
+      if (onCreditChange) await onCreditChange();
     } catch (err) {
       const apiErr = err as { message?: string; code?: string };
       setFeedback({

@@ -324,7 +324,7 @@ export const PremiumSection = () => {
       )}
 
       {/* Themes marketplace */}
-      <ThemeShop />
+      <ThemeShop onCreditChange={load} />
 
       {/* Coming soon: Omise auto-payment */}
       <section className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5">
