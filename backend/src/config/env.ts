@@ -45,6 +45,7 @@ export const env = {
   DAILY_SUMMARY_CRON: process.env.DAILY_SUMMARY_CRON ?? '0 21 * * *',
   WEEKLY_SUMMARY_CRON: process.env.WEEKLY_SUMMARY_CRON ?? '0 8 * * 1',
   EXPIRE_PREMIUM_CRON: process.env.EXPIRE_PREMIUM_CRON ?? '0 2 * * *',
+  RENEWAL_REMINDER_CRON: process.env.RENEWAL_REMINDER_CRON ?? '0 10 * * *',
   JOBS_TRIGGER_SECRET: process.env.JOBS_TRIGGER_SECRET ?? '',
 
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? '',

@@ -31,6 +31,7 @@ type Stmts = {
   applyPremium: Statement;
   revertToFree: Statement;
   listExpiredPremium: Statement;
+  listExpiringOnLocalDate: Statement;
   revertAllExpired: Statement;
   deleteById: Statement;
   search: Statement;
@@ -131,6 +132,15 @@ const stmts = (): Stmts => {
          AND premium_expires_at IS NOT NULL
          AND premium_expires_at <= ?
        ORDER BY premium_expires_at ASC`
+    ),
+    listExpiringOnLocalDate: db.prepare(
+      `SELECT ${USER_COLUMNS}
+       FROM users
+       WHERE plan = 'premium'
+         AND premium_expires_at IS NOT NULL
+         AND is_blocked = 0
+         AND date(premium_expires_at, '+7 hours') = ?
+       ORDER BY id ASC`
     ),
     revertAllExpired: db.prepare(
       `UPDATE users
@@ -295,6 +305,11 @@ export const userRepository = {
 
   listExpiredPremium: (nowIso: string): User[] => {
     const rows = stmts().listExpiredPremium.all(nowIso) as RawUser[];
+    return rows.map((r) => hydrate(r) as User);
+  },
+
+  listExpiringOnLocalDate: (localDate: string): User[] => {
+    const rows = stmts().listExpiringOnLocalDate.all(localDate) as RawUser[];
     return rows.map((r) => hydrate(r) as User);
   },
 
