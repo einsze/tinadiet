@@ -46,7 +46,14 @@ export const env = {
   WEEKLY_SUMMARY_CRON: process.env.WEEKLY_SUMMARY_CRON ?? '0 8 * * 1',
   EXPIRE_PREMIUM_CRON: process.env.EXPIRE_PREMIUM_CRON ?? '0 2 * * *',
   RENEWAL_REMINDER_CRON: process.env.RENEWAL_REMINDER_CRON ?? '0 10 * * *',
+  EXPIRE_GIFTS_CRON: process.env.EXPIRE_GIFTS_CRON ?? '0 3 * * *',
   JOBS_TRIGGER_SECRET: process.env.JOBS_TRIGGER_SECRET ?? '',
+
+  GIFT_CLAIM_WINDOW_DAYS: Number(process.env.GIFT_CLAIM_WINDOW_DAYS ?? 7),
+  GIFT_MAX_PENDING_PER_SENDER: Number(
+    process.env.GIFT_MAX_PENDING_PER_SENDER ?? 5
+  ),
+  GIFT_MESSAGE_MAX_LENGTH: Number(process.env.GIFT_MESSAGE_MAX_LENGTH ?? 200),
 
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? '',
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET ?? '',

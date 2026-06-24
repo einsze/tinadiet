@@ -20,6 +20,8 @@ import { ManualTopupPage } from './pages/ManualTopupPage.js';
 import { ChatPage } from './pages/ChatPage.js';
 import { SettingsPage } from './pages/SettingsPage.js';
 import { SupportPage } from './pages/SupportPage.js';
+import { GiftsPage } from './pages/GiftsPage.js';
+import { ClaimPage } from './pages/ClaimPage.js';
 import { NotFoundPage } from './pages/NotFoundPage.js';
 
 const StatusBadge = ({
@@ -213,6 +215,8 @@ const App = () => {
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/support" element={<SupportPage />} />
+            <Route path="/gifts" element={<GiftsPage />} />
+            <Route path="/claim/:token" element={<ClaimPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Route>

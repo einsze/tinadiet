@@ -205,3 +205,57 @@ export const operatorsApi = {
 
 // Re-export ManualPaymentStatus type for convenience
 export type { ManualPaymentStatus };
+
+// ----- Gifts (admin) -----
+
+export type AdminGiftStatus =
+  | 'pending'
+  | 'claimed'
+  | 'canceled'
+  | 'expired'
+  | 'refused'
+  | 'revoked';
+
+export type AdminGiftListItem = {
+  id: number;
+  claim_token: string;
+  gift_type: 'premium' | 'theme';
+  payload: { months?: 1 | 3 | 6 | 12; theme_slug?: string };
+  credit_spent_satang: number;
+  message: string | null;
+  status: AdminGiftStatus;
+  claim_expires_at: string;
+  claimed_at: string | null;
+  canceled_at: string | null;
+  expired_at: string | null;
+  refused_at: string | null;
+  refused_reason: string | null;
+  revoked_at: string | null;
+  revoked_by_admin_id: number | null;
+  revoke_reason: string | null;
+  applied_premium_ms_added: number | null;
+  applied_theme_slug: string | null;
+  created_at: string;
+  updated_at: string;
+  sender: { id: number; display_name: string | null; line_user_id: string } | null;
+  recipient: { id: number; display_name: string | null; line_user_id: string } | null;
+};
+
+export const giftsApi = {
+  list: (opts: { status?: AdminGiftStatus; limit?: number; offset?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (opts.status !== undefined) qs.set('status', opts.status);
+    qs.set('limit', String(opts.limit ?? 50));
+    qs.set('offset', String(opts.offset ?? 0));
+    return api.get<{ gifts: AdminGiftListItem[] }>(
+      `/api/v1/admin/gifts?${qs.toString()}`
+    );
+  },
+  detail: (id: number) =>
+    api.get<{ gift: AdminGiftListItem }>(`/api/v1/admin/gifts/${id}`),
+  revoke: (id: number, reason: string) =>
+    api.post<{ gift_id: number; sender_new_balance_satang: number }>(
+      `/api/v1/admin/gifts/${id}/revoke`,
+      { reason }
+    ),
+};

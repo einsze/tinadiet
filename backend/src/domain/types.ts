@@ -236,8 +236,54 @@ export type CreditLedgerSourceType =
   | 'admin_grant'
   | 'redeem_premium'
   | 'theme_purchase'
+  | 'gift_send'
+  | 'gift_refund'
   | 'revoke_topup'
   | 'revoke_redeem';
+
+export type GiftType = 'premium' | 'theme';
+
+export type GiftStatus =
+  | 'pending'
+  | 'claimed'
+  | 'canceled'
+  | 'expired'
+  | 'refused'
+  | 'revoked';
+
+export type GiftRefusedReason =
+  | 'recipient_already_owns_theme'
+  | 'recipient_blocked'
+  | 'self_claim';
+
+export type GiftPremiumPayload = { months: 1 | 3 | 6 | 12 };
+export type GiftThemePayload = { theme_slug: string };
+export type GiftPayload = GiftPremiumPayload | GiftThemePayload;
+
+export type Gift = {
+  id: number;
+  claim_token: string;
+  sender_user_id: number;
+  recipient_user_id: number | null;
+  gift_type: GiftType;
+  payload: string; // JSON-encoded GiftPayload
+  credit_spent_satang: number;
+  message: string | null;
+  status: GiftStatus;
+  claim_expires_at: string;
+  claimed_at: string | null;
+  canceled_at: string | null;
+  expired_at: string | null;
+  refused_at: string | null;
+  refused_reason: GiftRefusedReason | null;
+  revoked_at: string | null;
+  revoked_by_admin_id: number | null;
+  revoke_reason: string | null;
+  applied_premium_ms_added: number | null;
+  applied_theme_slug: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 export type ThemeSlug =
   | 'default'

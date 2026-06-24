@@ -11,8 +11,10 @@ import {
   ShieldAlert,
   Loader2,
   CreditCard,
+  Gift as GiftIcon,
 } from 'lucide-react';
 import { ThemeShop } from './ThemeShop.js';
+import { GiftCreateModal } from './GiftCreateModal.js';
 import { walletApi } from '../api/wallet.js';
 import { topupApi } from '../api/topup.js';
 import { premiumApi } from '../api/premium.js';
@@ -104,38 +106,59 @@ const BundleButton = ({
   bundle,
   balance,
   onRedeem,
+  onGift,
   pending,
 }: {
   bundle: PremiumBundle;
   balance: number;
   onRedeem: (months: 1 | 3 | 6 | 12) => void;
+  onGift: (months: 1 | 3 | 6 | 12) => void;
   pending: boolean;
 }) => {
   const required = bundle.credit_required * 100; // satang
   const enough = balance >= required;
+  const disabled = !enough || pending || bundle.credit_required <= 0;
   return (
-    <button
-      type="button"
-      onClick={() => onRedeem(bundle.months)}
-      disabled={!enough || pending || bundle.credit_required <= 0}
-      className={`w-full rounded-lg border px-4 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+    <div
+      className={`rounded-lg border transition ${
         enough
-          ? 'border-amber-200 bg-white hover:border-amber-400 hover:bg-amber-50'
+          ? 'border-amber-200 bg-white'
           : 'border-slate-200 bg-slate-50'
       }`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-4 pt-3">
         <div className="text-sm font-semibold text-slate-900">
-          Premium {bundle.months} {bundle.months === 1 ? 'เดือน' : 'เดือน'}
+          Premium {bundle.months} เดือน
         </div>
         <div className="text-xs font-bold text-amber-700">
           {bundle.credit_required} credit
         </div>
       </div>
-      <div className="mt-1 text-[10px] text-slate-500">
-        {enough ? 'แตะเพื่อใช้เครดิต' : `ต้องมีอีก ${formatCredit(required - balance)} credit`}
+      <div className="px-4 mt-1 text-[10px] text-slate-500">
+        {enough
+          ? 'เลือกใช้เอง หรือส่งให้เพื่อน'
+          : `ต้องมีอีก ${formatCredit(required - balance)} credit`}
       </div>
-    </button>
+      <div className="mt-2 grid grid-cols-2 gap-2 px-3 pb-3">
+        <button
+          type="button"
+          onClick={() => onRedeem(bundle.months)}
+          disabled={disabled}
+          className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          ใช้เอง
+        </button>
+        <button
+          type="button"
+          onClick={() => onGift(bundle.months)}
+          disabled={disabled}
+          className="flex items-center justify-center gap-1 rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <GiftIcon className="h-3 w-3" />
+          ของขวัญ
+        </button>
+      </div>
+    </div>
   );
 };
 
@@ -146,6 +169,10 @@ export const PremiumSection = () => {
   const [premiumExpiresAt, setPremiumExpiresAt] = useState<string | null>(
     null
   );
+  const [giftBundle, setGiftBundle] = useState<{
+    months: 1 | 3 | 6 | 12;
+    credit_required: number;
+  } | null>(null);
   const navigate = useNavigate();
   const { status: sessionStatus, setUser } = useSession();
 
@@ -306,6 +333,9 @@ export const PremiumSection = () => {
               bundle={b}
               balance={balance}
               onRedeem={handleRedeem}
+              onGift={(months) =>
+                setGiftBundle({ months, credit_required: b.credit_required })
+              }
               pending={redeemPending !== false}
             />
           ))}
@@ -353,6 +383,18 @@ export const PremiumSection = () => {
           กำลังอยู่ระหว่างการยืนยันตัวตนกับผู้ให้บริการ
         </p>
       </section>
+
+      {/* Gift modal — single instance, opens for either bundle or theme */}
+      {giftBundle !== null && (
+        <GiftCreateModal
+          open={true}
+          onClose={() => setGiftBundle(null)}
+          giftType="premium"
+          payload={{ months: giftBundle.months }}
+          priceCredit={giftBundle.credit_required}
+          subjectLabel={`Premium ${giftBundle.months} เดือน`}
+        />
+      )}
     </div>
   );
 };

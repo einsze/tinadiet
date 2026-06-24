@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   LogOut,
   UserCircle,
+  Gift as GiftIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useAuth } from '../state/auth.js';
@@ -22,6 +23,7 @@ const NAV: NavItem[] = [
   { to: '/payments/pending', label: 'Pending Review', icon: <ClipboardList className="h-4 w-4" /> },
   { to: '/payments/history', label: 'Payment History', icon: <History className="h-4 w-4" /> },
   { to: '/users', label: 'Users', icon: <UsersIcon className="h-4 w-4" /> },
+  { to: '/gifts', label: 'Gifts', icon: <GiftIcon className="h-4 w-4" /> },
   { to: '/settings', label: 'Settings', icon: <SettingsIcon className="h-4 w-4" />, superadminOnly: true },
   { to: '/operators', label: 'Operators', icon: <ShieldCheck className="h-4 w-4" />, superadminOnly: true },
   { to: '/account', label: 'My Account', icon: <UserCircle className="h-4 w-4" /> },

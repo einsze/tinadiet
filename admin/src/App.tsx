@@ -18,6 +18,8 @@ import { UserDetailPage } from './pages/UserDetailPage.js';
 import { SettingsPage } from './pages/SettingsPage.js';
 import { OperatorsPage } from './pages/OperatorsPage.js';
 import { AccountPage } from './pages/AccountPage.js';
+import { GiftsListPage } from './pages/GiftsListPage.js';
+import { GiftDetailPage } from './pages/GiftDetailPage.js';
 
 const RequireAuth = () => {
   const { state } = useAuth();
@@ -77,6 +79,8 @@ const App = () => {
             <Route path="/payments/:id" element={<PaymentDetailPage />} />
             <Route path="/users" element={<UsersListPage />} />
             <Route path="/users/:id" element={<UserDetailPage />} />
+            <Route path="/gifts" element={<GiftsListPage />} />
+            <Route path="/gifts/:id" element={<GiftDetailPage />} />
             <Route path="/account" element={<AccountPage />} />
 
             <Route element={<RequireSuperadmin />}>

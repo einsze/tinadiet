@@ -4,6 +4,7 @@ import { runDailySummary } from './daily_summary.js';
 import { runWeeklySummary } from './weekly_summary.js';
 import { runExpirePremium } from './expire_premium.js';
 import { runRenewalReminders } from './renewal_reminders.js';
+import { runExpireGifts } from './expire_gifts.js';
 
 let _started = false;
 
@@ -112,6 +113,30 @@ export const startCronJobs = (): void => {
     { timezone: env.CRON_TZ }
   );
 
+  cron.schedule(
+    env.EXPIRE_GIFTS_CRON,
+    () => {
+      console.log(
+        JSON.stringify({
+          level: 'info',
+          msg: 'jobs.expire_gifts.tick',
+          schedule: env.EXPIRE_GIFTS_CRON,
+          tz: env.CRON_TZ,
+        })
+      );
+      runExpireGifts(false).catch((err: unknown) => {
+        console.error(
+          JSON.stringify({
+            level: 'error',
+            msg: 'jobs.expire_gifts.run_failed',
+            error: err instanceof Error ? err.message : String(err),
+          })
+        );
+      });
+    },
+    { timezone: env.CRON_TZ }
+  );
+
   _started = true;
   console.log(
     JSON.stringify({
@@ -121,6 +146,7 @@ export const startCronJobs = (): void => {
       weekly_schedule: env.WEEKLY_SUMMARY_CRON,
       expire_premium_schedule: env.EXPIRE_PREMIUM_CRON,
       renewal_reminder_schedule: env.RENEWAL_REMINDER_CRON,
+      expire_gifts_schedule: env.EXPIRE_GIFTS_CRON,
       tz: env.CRON_TZ,
     })
   );

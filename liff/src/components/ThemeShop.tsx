@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Palette, Check, Loader2, Lock, Sparkles } from 'lucide-react';
+import {
+  Palette,
+  Check,
+  Loader2,
+  Lock,
+  Sparkles,
+  Gift as GiftIcon,
+} from 'lucide-react';
 import { themesApi } from '../api/themes.js';
 import { PALETTES } from '../themes/palettes.js';
 import { THEME_META, type ThemeSlug } from '../themes/catalog.js';
@@ -7,6 +14,7 @@ import { useSession } from '../state/session.js';
 import { useTheme } from '../state/theme.js';
 import { formatCredit } from '../types/wallet.js';
 import type { ThemeListItem } from '../types/theme.js';
+import { GiftCreateModal } from './GiftCreateModal.js';
 
 type State =
   | { kind: 'loading' }
@@ -39,12 +47,14 @@ const ThemeCard = ({
   busySlug,
   onPurchase,
   onActivate,
+  onGift,
 }: {
   theme: ThemeListItem;
   balance: number;
   busySlug: string | null;
   onPurchase: (slug: ThemeSlug) => void;
   onActivate: (slug: ThemeSlug) => void;
+  onGift: (slug: ThemeSlug, priceCredit: number) => void;
 }) => {
   const meta = THEME_META[theme.slug];
   const priceSatang = (theme.price_credit ?? 0) * 100;
@@ -119,27 +129,40 @@ const ThemeCard = ({
             <span>ใช้ธีมนี้</span>
           </button>
         ) : theme.for_sale ? (
-          <button
-            type="button"
-            onClick={() => onPurchase(theme.slug)}
-            disabled={!canAfford || busy}
-            className={`flex flex-1 items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${
-              canAfford
-                ? 'bg-amber-500 text-white hover:bg-amber-600'
-                : 'bg-slate-200 text-slate-500'
-            }`}
-          >
-            {busy ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : !canAfford ? (
-              <Lock className="h-3.5 w-3.5" />
-            ) : null}
-            <span>
-              {canAfford
-                ? `แลก ${theme.price_credit} credit`
-                : `ต้องมีอีก ${formatCredit(priceSatang - balance)} credit`}
-            </span>
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => onPurchase(theme.slug)}
+              disabled={!canAfford || busy}
+              className={`flex flex-1 items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                canAfford
+                  ? 'bg-amber-500 text-white hover:bg-amber-600'
+                  : 'bg-slate-200 text-slate-500'
+              }`}
+            >
+              {busy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : !canAfford ? (
+                <Lock className="h-3.5 w-3.5" />
+              ) : null}
+              <span>
+                {canAfford
+                  ? `แลก ${theme.price_credit} credit`
+                  : `ต้องมีอีก ${formatCredit(priceSatang - balance)} credit`}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onGift(theme.slug, theme.price_credit ?? 0)
+              }
+              disabled={!canAfford || busy}
+              className="flex items-center justify-center gap-1 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+              title="ส่งเป็นของขวัญ"
+            >
+              <GiftIcon className="h-3.5 w-3.5" />
+            </button>
+          </>
         ) : (
           <button
             type="button"
@@ -160,6 +183,10 @@ export const ThemeShop = () => {
   const [feedback, setFeedback] = useState<{
     tone: 'success' | 'error';
     text: string;
+  } | null>(null);
+  const [giftTheme, setGiftTheme] = useState<{
+    slug: ThemeSlug;
+    priceCredit: number;
   } | null>(null);
   const { setUser, status: sessionStatus } = useSession();
   const { setActiveSlug } = useTheme();
@@ -299,9 +326,23 @@ export const ThemeShop = () => {
             busySlug={busySlug}
             onPurchase={handlePurchase}
             onActivate={handleActivate}
+            onGift={(slug, priceCredit) =>
+              setGiftTheme({ slug, priceCredit })
+            }
           />
         ))}
       </div>
+
+      {giftTheme !== null && (
+        <GiftCreateModal
+          open={true}
+          onClose={() => setGiftTheme(null)}
+          giftType="theme"
+          payload={{ theme_slug: giftTheme.slug }}
+          priceCredit={giftTheme.priceCredit}
+          subjectLabel={`ธีม ${THEME_META[giftTheme.slug].name_th}`}
+        />
+      )}
     </section>
   );
 };

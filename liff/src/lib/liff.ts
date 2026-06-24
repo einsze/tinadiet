@@ -24,4 +24,37 @@ export const closeWindow = (): void => liff.closeWindow();
 
 export const getProfile = () => liff.getProfile();
 
+export const isShareTargetPickerAvailable = (): boolean => {
+  try {
+    return (
+      typeof liff.isApiAvailable === 'function' &&
+      liff.isApiAvailable('shareTargetPicker')
+    );
+  } catch {
+    return false;
+  }
+};
+
+export const shareGiftToLine = async (
+  text: string,
+  url: string
+): Promise<'shared' | 'unsupported' | 'canceled' | 'error'> => {
+  if (!isShareTargetPickerAvailable()) return 'unsupported';
+  try {
+    const res = await liff.shareTargetPicker(
+      [
+        {
+          type: 'text',
+          text: `${text}\n${url}`,
+        },
+      ],
+      { isMultiple: true }
+    );
+    if (res === null) return 'canceled';
+    return 'shared';
+  } catch {
+    return 'error';
+  }
+};
+
 export { liff };

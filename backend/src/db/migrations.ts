@@ -338,4 +338,66 @@ export const migrations: ReadonlyArray<Migration> = [
       CREATE INDEX idx_credit_ledger_source ON credit_ledger(source_type, source_ref_id);
     `,
   },
+  {
+    name: '0010_gifts',
+    sql: `
+      CREATE TABLE gifts (
+        id                              INTEGER PRIMARY KEY AUTOINCREMENT,
+        claim_token                     TEXT    NOT NULL UNIQUE,
+        sender_user_id                  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        recipient_user_id               INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        gift_type                       TEXT    NOT NULL CHECK(gift_type IN ('premium','theme')),
+        payload                         TEXT    NOT NULL,
+        credit_spent_satang             INTEGER NOT NULL,
+        message                         TEXT,
+        status                          TEXT    NOT NULL DEFAULT 'pending'
+                                          CHECK(status IN ('pending','claimed','canceled','expired','refused','revoked')),
+        claim_expires_at                TEXT    NOT NULL,
+        claimed_at                      TEXT,
+        canceled_at                     TEXT,
+        expired_at                      TEXT,
+        refused_at                      TEXT,
+        refused_reason                  TEXT,
+        revoked_at                      TEXT,
+        revoked_by_admin_id             INTEGER REFERENCES admin_users(id),
+        revoke_reason                   TEXT,
+        applied_premium_ms_added        INTEGER,
+        applied_theme_slug              TEXT,
+        created_at                      TEXT    NOT NULL DEFAULT (datetime('now')),
+        updated_at                      TEXT    NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX idx_gifts_sender_created ON gifts(sender_user_id, created_at DESC);
+      CREATE INDEX idx_gifts_recipient_claimed ON gifts(recipient_user_id, claimed_at DESC);
+      CREATE INDEX idx_gifts_token ON gifts(claim_token);
+      CREATE INDEX idx_gifts_status_created ON gifts(status, created_at DESC);
+      CREATE INDEX idx_gifts_expiry_pending ON gifts(status, claim_expires_at);
+
+      -- Rebuild credit_ledger to extend source_type CHECK with 'gift_send' + 'gift_refund'.
+      CREATE TABLE credit_ledger_new (
+        id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id                   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        amount_satang             INTEGER NOT NULL,
+        balance_after_satang      INTEGER NOT NULL,
+        source_type               TEXT    NOT NULL CHECK(source_type IN
+                                    ('manual_topup','omise_topup','admin_grant',
+                                     'redeem_premium','theme_purchase',
+                                     'gift_send','gift_refund',
+                                     'revoke_topup','revoke_redeem')),
+        source_ref_id             INTEGER,
+        admin_user_id             INTEGER REFERENCES admin_users(id),
+        note                      TEXT,
+        created_at                TEXT    NOT NULL DEFAULT (datetime('now'))
+      );
+      INSERT INTO credit_ledger_new
+        (id, user_id, amount_satang, balance_after_satang, source_type,
+         source_ref_id, admin_user_id, note, created_at)
+        SELECT id, user_id, amount_satang, balance_after_satang, source_type,
+               source_ref_id, admin_user_id, note, created_at
+        FROM credit_ledger;
+      DROP TABLE credit_ledger;
+      ALTER TABLE credit_ledger_new RENAME TO credit_ledger;
+      CREATE INDEX idx_credit_ledger_user_created ON credit_ledger(user_id, created_at DESC);
+      CREATE INDEX idx_credit_ledger_source ON credit_ledger(source_type, source_ref_id);
+    `,
+  },
 ];

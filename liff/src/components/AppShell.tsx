@@ -2,6 +2,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import {
   Crown,
+  Gift as GiftIcon,
   Home,
   LifeBuoy,
   MessageCircleHeart,
@@ -56,6 +57,11 @@ const SUBPAGE_META: Record<string, SubpageMeta> = {
     title: 'Support',
     Icon: LifeBuoy,
     tagline: 'ติดปัญหา? เราช่วยได้ค่ะ',
+  },
+  '/gifts': {
+    title: 'หัตถ์การให้',
+    Icon: GiftIcon,
+    tagline: 'ส่งและรับของขวัญจากเพื่อน',
   },
 };
 
@@ -169,10 +175,18 @@ const FALLBACK_SUBPAGE_META: SubpageMeta = {
   tagline: '',
 };
 
+const CLAIM_PAGE_META: SubpageMeta = {
+  title: 'หัตถ์การให้',
+  Icon: GiftIcon,
+  tagline: 'มีของขวัญรอคุณอยู่!',
+};
+
 export const AppShell = ({ children, showBottomNav = true }: Props) => {
   const location = useLocation();
   const isRoot = location.pathname === '/' || location.pathname === '';
-  const meta = SUBPAGE_META[location.pathname] ?? FALLBACK_SUBPAGE_META;
+  const meta = location.pathname.startsWith('/claim/')
+    ? CLAIM_PAGE_META
+    : (SUBPAGE_META[location.pathname] ?? FALLBACK_SUBPAGE_META);
 
   return (
     <div className="relative flex min-h-screen flex-col bg-gradient-to-b from-brand-50 via-white to-brand-50/40">
