@@ -285,4 +285,57 @@ export const migrations: ReadonlyArray<Migration> = [
          'superadmin');
     `,
   },
+  {
+    name: '0009_themes',
+    sql: `
+      -- Active theme on users (NULL means "default" theme)
+      ALTER TABLE users ADD COLUMN active_theme_slug TEXT;
+
+      -- User-owned themes (permanent unlock once purchased)
+      CREATE TABLE user_themes (
+        id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id                INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        theme_slug             TEXT    NOT NULL,
+        price_credit_snapshot  INTEGER NOT NULL,
+        purchased_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(user_id, theme_slug)
+      );
+      CREATE INDEX idx_user_themes_user ON user_themes(user_id);
+
+      -- Seed default theme prices (in credit). Admin can edit via /settings.
+      INSERT INTO system_settings (key, value) VALUES
+        ('price_theme_sakura_credit',   '50'),
+        ('price_theme_ocean_credit',    '50'),
+        ('price_theme_forest_credit',   '50'),
+        ('price_theme_sunset_credit',   '50'),
+        ('price_theme_midnight_credit', '80');
+
+      -- Rebuild credit_ledger to extend source_type CHECK with 'theme_purchase'.
+      -- SQLite cannot ALTER a CHECK constraint in place.
+      CREATE TABLE credit_ledger_new (
+        id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id                   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        amount_satang             INTEGER NOT NULL,
+        balance_after_satang      INTEGER NOT NULL,
+        source_type               TEXT    NOT NULL CHECK(source_type IN
+                                    ('manual_topup','omise_topup','admin_grant',
+                                     'redeem_premium','theme_purchase',
+                                     'revoke_topup','revoke_redeem')),
+        source_ref_id             INTEGER,
+        admin_user_id             INTEGER REFERENCES admin_users(id),
+        note                      TEXT,
+        created_at                TEXT    NOT NULL DEFAULT (datetime('now'))
+      );
+      INSERT INTO credit_ledger_new
+        (id, user_id, amount_satang, balance_after_satang, source_type,
+         source_ref_id, admin_user_id, note, created_at)
+        SELECT id, user_id, amount_satang, balance_after_satang, source_type,
+               source_ref_id, admin_user_id, note, created_at
+        FROM credit_ledger;
+      DROP TABLE credit_ledger;
+      ALTER TABLE credit_ledger_new RENAME TO credit_ledger;
+      CREATE INDEX idx_credit_ledger_user_created ON credit_ledger(user_id, created_at DESC);
+      CREATE INDEX idx_credit_ledger_source ON credit_ledger(source_type, source_ref_id);
+    `,
+  },
 ];

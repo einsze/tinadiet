@@ -33,6 +33,7 @@ export type User = {
   plan: Plan;
   premium_expires_at: string | null;
   stripe_customer_id: string | null;
+  active_theme_slug: string | null;
   created_at: string;
   updated_at: string;
 };

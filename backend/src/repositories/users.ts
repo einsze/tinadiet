@@ -13,6 +13,7 @@ const USER_COLUMNS = `
   locale, timezone,
   plan, premium_expires_at, stripe_customer_id, omise_customer_id,
   credit_balance_satang, abuse_warning_count, is_blocked,
+  active_theme_slug,
   created_at, updated_at
 `;
 
@@ -40,6 +41,7 @@ type Stmts = {
   incrementAbuseCount: Statement;
   clearAbuseCount: Statement;
   setBlocked: Statement;
+  setActiveTheme: Statement;
 };
 
 type RawUser = Omit<User, 'is_blocked'> & { is_blocked: number };
@@ -184,6 +186,11 @@ const stmts = (): Stmts => {
     setBlocked: db.prepare(
       `UPDATE users
        SET is_blocked = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    ),
+    setActiveTheme: db.prepare(
+      `UPDATE users
+       SET active_theme_slug = ?, updated_at = datetime('now')
        WHERE id = ?`
     ),
   };
@@ -343,6 +350,14 @@ export const userRepository = {
 
   setBlocked: (userId: number, blocked: boolean): User | undefined => {
     stmts().setBlocked.run(blocked ? 1 : 0, userId);
+    return findByIdHydrated(userId);
+  },
+
+  setActiveTheme: (
+    userId: number,
+    themeSlug: string | null
+  ): User | undefined => {
+    stmts().setActiveTheme.run(themeSlug, userId);
     return findByIdHydrated(userId);
   },
 

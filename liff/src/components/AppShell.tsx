@@ -175,10 +175,13 @@ export const AppShell = ({ children, showBottomNav = true }: Props) => {
   const meta = SUBPAGE_META[location.pathname] ?? FALLBACK_SUBPAGE_META;
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-brand-50 via-white to-brand-50/40">
-      {isRoot ? <RootHeader /> : <SubpageHeader meta={meta} />}
-      <main className="flex-1 px-5 pb-28 pt-2">{children}</main>
-      {showBottomNav ? <BottomNav /> : null}
+    <div className="relative flex min-h-screen flex-col bg-gradient-to-b from-brand-50 via-white to-brand-50/40">
+      <div aria-hidden className="theme-pattern" />
+      <div className="relative z-[1] flex min-h-screen flex-col">
+        {isRoot ? <RootHeader /> : <SubpageHeader meta={meta} />}
+        <main className="flex-1 px-5 pb-28 pt-2">{children}</main>
+        {showBottomNav ? <BottomNav /> : null}
+      </div>
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.js';
 import { SessionProvider } from './state/session.js';
+import { ThemeProvider } from './state/theme.js';
 
 const root = document.getElementById('root');
 if (root === null) {
@@ -12,7 +13,9 @@ if (root === null) {
 createRoot(root).render(
   <StrictMode>
     <SessionProvider>
-      <App />
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
     </SessionProvider>
   </StrictMode>
 );

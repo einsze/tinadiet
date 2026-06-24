@@ -10,9 +10,9 @@ import {
   XCircle,
   ShieldAlert,
   Loader2,
-  Palette,
   CreditCard,
 } from 'lucide-react';
+import { ThemeShop } from './ThemeShop.js';
 import { walletApi } from '../api/wallet.js';
 import { topupApi } from '../api/topup.js';
 import { premiumApi } from '../api/premium.js';
@@ -323,16 +323,8 @@ export const PremiumSection = () => {
         </section>
       )}
 
-      {/* Coming soon: themes */}
-      <section className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5">
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Palette className="h-4 w-4" />
-          <span className="font-medium">Themes — Coming Soon</span>
-        </div>
-        <p className="mt-1 text-xs text-slate-400">
-          เร็วๆ นี้: เลือกธีม Sakura, Ocean, Dark mode และอื่นๆ
-        </p>
-      </section>
+      {/* Themes marketplace */}
+      <ThemeShop />
 
       {/* Coming soon: Omise auto-payment */}
       <section className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5">

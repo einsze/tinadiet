@@ -55,6 +55,31 @@ const FIELD_LABELS: Record<string, { label: string; hint: string; unit: string }
     hint: 'Largest allowed top-up amount (satang)',
     unit: 'satang',
   },
+  price_theme_sakura_credit: {
+    label: 'Sakura theme',
+    hint: 'Credit cost for Sakura theme. Set 0 to hide from store.',
+    unit: 'credit',
+  },
+  price_theme_ocean_credit: {
+    label: 'Ocean theme',
+    hint: 'Credit cost for Ocean theme. Set 0 to hide from store.',
+    unit: 'credit',
+  },
+  price_theme_forest_credit: {
+    label: 'Forest theme',
+    hint: 'Credit cost for Forest theme. Set 0 to hide from store.',
+    unit: 'credit',
+  },
+  price_theme_sunset_credit: {
+    label: 'Sunset theme',
+    hint: 'Credit cost for Sunset theme. Set 0 to hide from store.',
+    unit: 'credit',
+  },
+  price_theme_midnight_credit: {
+    label: 'Midnight theme',
+    hint: 'Credit cost for Midnight theme. Set 0 to hide from store.',
+    unit: 'credit',
+  },
 };
 
 const SECTIONS: Array<{ title: string; keys: string[] }> = [
@@ -74,6 +99,16 @@ const SECTIONS: Array<{ title: string; keys: string[] }> = [
   {
     title: 'Top-up Limits & Safety',
     keys: ['topup_min_satang', 'topup_max_satang', 'high_value_threshold_satang'],
+  },
+  {
+    title: 'Theme Pricing (in credit)',
+    keys: [
+      'price_theme_sakura_credit',
+      'price_theme_ocean_credit',
+      'price_theme_forest_credit',
+      'price_theme_sunset_credit',
+      'price_theme_midnight_credit',
+    ],
   },
 ];
 

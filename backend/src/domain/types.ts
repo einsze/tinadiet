@@ -98,6 +98,7 @@ export type User = {
   credit_balance_satang: number;
   abuse_warning_count: number;
   is_blocked: boolean;
+  active_theme_slug: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -234,8 +235,25 @@ export type CreditLedgerSourceType =
   | 'omise_topup'
   | 'admin_grant'
   | 'redeem_premium'
+  | 'theme_purchase'
   | 'revoke_topup'
   | 'revoke_redeem';
+
+export type ThemeSlug =
+  | 'default'
+  | 'sakura'
+  | 'ocean'
+  | 'forest'
+  | 'sunset'
+  | 'midnight';
+
+export type UserTheme = {
+  id: number;
+  user_id: number;
+  theme_slug: string;
+  price_credit_snapshot: number;
+  purchased_at: string;
+};
 
 export type CreditLedgerEntry = {
   id: number;
@@ -274,7 +292,12 @@ export type SystemSettingKey =
   | 'price_12mo_credit'
   | 'high_value_threshold_satang'
   | 'topup_min_satang'
-  | 'topup_max_satang';
+  | 'topup_max_satang'
+  | 'price_theme_sakura_credit'
+  | 'price_theme_ocean_credit'
+  | 'price_theme_forest_credit'
+  | 'price_theme_sunset_credit'
+  | 'price_theme_midnight_credit';
 
 export type SystemSetting = {
   key: SystemSettingKey;

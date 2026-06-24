@@ -20,6 +20,11 @@ const ALLOWED_KEYS: ReadonlyArray<SystemSettingKey> = [
   'high_value_threshold_satang',
   'topup_min_satang',
   'topup_max_satang',
+  'price_theme_sakura_credit',
+  'price_theme_ocean_credit',
+  'price_theme_forest_credit',
+  'price_theme_sunset_credit',
+  'price_theme_midnight_credit',
 ];
 
 router.get('/', requireAdmin, (_req: Request, res: Response) => {
