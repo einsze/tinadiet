@@ -218,7 +218,7 @@ export const ClaimPage = () => {
             <GiftIcon className="h-7 w-7 text-amber-500" />
           </div>
           <p className="mt-3 text-[11px] uppercase tracking-wide text-amber-700">
-            หัตถ์การให้สำหรับคุณ
+            ของขวัญสำหรับคุณ
           </p>
           <h2 className="mt-1 text-xl font-bold text-slate-900">
             {desc.label}

@@ -217,10 +217,30 @@ export const DashboardPage = () => {
         </div>
         <div className="flex-1">
           <div className="text-sm font-semibold text-slate-900">
-            หัตถ์การให้
+            ของขวัญ
           </div>
           <div className="mt-0.5 text-xs text-slate-600">
             ดูของขวัญที่ส่งและได้รับ
+          </div>
+        </div>
+        <div className="shrink-0 text-slate-400">→</div>
+      </Link>
+
+      <Link
+        to="/history"
+        className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-slate-50 via-brand-50 to-slate-50 p-4 shadow-sm transition hover:from-slate-100 hover:via-brand-100 hover:to-slate-100"
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-xl shadow-sm">
+          📅
+        </div>
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-slate-900">
+            ดูประวัติย้อนหลัง
+          </div>
+          <div className="mt-0.5 text-xs text-slate-600">
+            {isPremium
+              ? 'ดูบันทึกอาหารและน้ำหนักได้ถึง 365 วัน'
+              : 'ดูบันทึกอาหารและน้ำหนักย้อนหลัง 30 วัน'}
           </div>
         </div>
         <div className="shrink-0 text-slate-400">→</div>

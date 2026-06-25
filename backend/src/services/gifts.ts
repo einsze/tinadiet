@@ -577,7 +577,7 @@ export const notifyGiftClaimed = async (
   const sender = userRepository.findById(gift.sender_user_id);
   if (!sender) return;
   const text = [
-    '🎁 หัตถ์การให้',
+    '🎁 ของขวัญ',
     '',
     `${recipient.display_name ?? 'เพื่อน'} ได้รับ${describeGift(gift)}`,
     `ที่คุณส่งให้แล้วค่ะ`,
@@ -589,7 +589,7 @@ export const notifyGiftCanceled = async (gift: Gift): Promise<void> => {
   const sender = userRepository.findById(gift.sender_user_id);
   if (!sender) return;
   const text = [
-    'ยกเลิกหัตถ์การให้สำเร็จ',
+    'ยกเลิกการมอบของขวัญแล้ว 🥺',
     '',
     `${gift.credit_spent_satang / 100} credit คืนเข้าบัญชีของคุณแล้วค่ะ`,
   ].join('\n');
@@ -606,7 +606,7 @@ export const notifyGiftRefused = async (gift: Gift): Promise<void> => {
         ? 'บัญชีผู้รับถูกระงับ'
         : 'ไม่สามารถส่งให้ตัวเองได้';
   const text = [
-    `หัตถ์การให้ของคุณไม่สามารถใช้ได้: ${reason}`,
+    `ของขวัญของคุณไม่สามารถใช้ได้: ${reason}`,
     '',
     `${gift.credit_spent_satang / 100} credit คืนเข้าบัญชีของคุณแล้วค่ะ`,
   ].join('\n');
@@ -617,7 +617,7 @@ export const notifyGiftExpired = async (gift: Gift): Promise<void> => {
   const sender = userRepository.findById(gift.sender_user_id);
   if (!sender) return;
   const text = [
-    'หัตถ์การให้ของคุณหมดอายุการรับ',
+    'ของขวัญของคุณหมดอายุการรับ',
     '',
     `${gift.credit_spent_satang / 100} credit คืนเข้าบัญชีของคุณแล้วค่ะ`,
   ].join('\n');
@@ -628,7 +628,7 @@ export const notifyGiftRevokedToSender = async (gift: Gift): Promise<void> => {
   const sender = userRepository.findById(gift.sender_user_id);
   if (!sender) return;
   const text = [
-    'หัตถ์การให้ของคุณถูกยกเลิกโดยทีม Tina',
+    'ของขวัญของคุณถูกยกเลิกโดยทีม Tina',
     `เหตุผล: ${gift.revoke_reason ?? '-'}`,
     '',
     `${gift.credit_spent_satang / 100} credit คืนเข้าบัญชีของคุณแล้วค่ะ`,
@@ -643,7 +643,7 @@ export const notifyGiftRevokedToRecipient = async (
   const recipient = userRepository.findById(gift.recipient_user_id);
   if (!recipient) return;
   const text = [
-    `${describeGift(gift)} ที่ได้รับเป็นหัตถ์การให้ถูกยกเลิกโดยทีม Tina`,
+    `${describeGift(gift)} ที่ได้รับเป็นของขวัญถูกยกเลิกโดยทีม Tina`,
     `เหตุผล: ${gift.revoke_reason ?? '-'}`,
     '',
     'หากมีข้อสงสัย ติดต่อทีม support ค่ะ',

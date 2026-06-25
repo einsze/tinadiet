@@ -106,7 +106,7 @@ export const GiftCreateModal = ({
       const apiErr = err as { message?: string };
       setState({
         kind: 'error',
-        message: apiErr.message ?? 'สร้างหัตถ์การให้ไม่สำเร็จ ลองอีกครั้งนะคะ',
+        message: apiErr.message ?? 'สร้างของขวัญไม่สำเร็จ ลองอีกครั้งนะคะ',
       });
     }
   };
@@ -166,7 +166,7 @@ export const GiftCreateModal = ({
           </span>
           <div>
             <h3 className="text-sm font-semibold text-slate-900">
-              ส่งหัตถ์การให้
+              มอบของขวัญให้
             </h3>
             <p className="text-[11px] text-slate-500">
               {subjectLabel} · {priceCredit} credit

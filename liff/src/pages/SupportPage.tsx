@@ -71,15 +71,6 @@ export const SupportPage = () => {
               </span>
             </span>
           </a>
-          <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
-            <span className="text-xl">💬</span>
-            <span className="flex-1">
-              <span className="block font-semibold text-slate-900">LINE Chat</span>
-              <span className="block text-xs text-slate-500">
-                ส่งข้อความมาในแชต TinaDiet
-              </span>
-            </span>
-          </div>
         </div>
       </section>
 

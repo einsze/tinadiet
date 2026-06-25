@@ -1,6 +1,7 @@
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import {
+  CalendarDays,
   Crown,
   Gift as GiftIcon,
   Home,
@@ -59,9 +60,14 @@ const SUBPAGE_META: Record<string, SubpageMeta> = {
     tagline: 'ติดปัญหา? เราช่วยได้ค่ะ',
   },
   '/gifts': {
-    title: 'หัตถ์การให้',
+    title: 'ของขวัญ',
     Icon: GiftIcon,
     tagline: 'ส่งและรับของขวัญจากเพื่อน',
+  },
+  '/history': {
+    title: 'History',
+    Icon: CalendarDays,
+    tagline: 'ดูบันทึกย้อนหลัง',
   },
 };
 
@@ -176,7 +182,7 @@ const FALLBACK_SUBPAGE_META: SubpageMeta = {
 };
 
 const CLAIM_PAGE_META: SubpageMeta = {
-  title: 'หัตถ์การให้',
+  title: 'ของขวัญ',
   Icon: GiftIcon,
   tagline: 'มีของขวัญรอคุณอยู่!',
 };

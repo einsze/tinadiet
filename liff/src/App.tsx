@@ -22,6 +22,7 @@ import { SettingsPage } from './pages/SettingsPage.js';
 import { SupportPage } from './pages/SupportPage.js';
 import { GiftsPage } from './pages/GiftsPage.js';
 import { ClaimPage } from './pages/ClaimPage.js';
+import { HistoryPage } from './pages/HistoryPage.js';
 import { NotFoundPage } from './pages/NotFoundPage.js';
 
 const StatusBadge = ({
@@ -217,6 +218,7 @@ const App = () => {
             <Route path="/support" element={<SupportPage />} />
             <Route path="/gifts" element={<GiftsPage />} />
             <Route path="/claim/:token" element={<ClaimPage />} />
+            <Route path="/history" element={<HistoryPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Route>

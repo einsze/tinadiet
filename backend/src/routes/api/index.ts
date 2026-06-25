@@ -11,6 +11,7 @@ import topupRouter from './topup.js';
 import premiumRouter from './premium.js';
 import themesRouter from './themes.js';
 import giftsRouter from './gifts.js';
+import historyRouter from './history.js';
 import adminRouter from './admin/index.js';
 
 const router = Router();
@@ -27,6 +28,7 @@ router.use('/topup', topupRouter);
 router.use('/premium', premiumRouter);
 router.use('/themes', themesRouter);
 router.use('/gifts', giftsRouter);
+router.use('/history', historyRouter);
 router.use('/admin', adminRouter);
 
 export default router;

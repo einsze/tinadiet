@@ -12,6 +12,7 @@ type Stmts = {
   findById: Statement;
   listRecent: Statement;
   latest: Statement;
+  findByUserAndDate: Statement;
 };
 
 let _stmts: Stmts | null = null;
@@ -40,6 +41,13 @@ const stmts = (): Stmts => {
        ORDER BY logged_at DESC
        LIMIT 1`
     ),
+    findByUserAndDate: db.prepare(
+      `SELECT ${WEIGHT_LOG_COLUMNS}
+       FROM weight_logs
+       WHERE user_id = ? AND date = ?
+       ORDER BY logged_at DESC
+       LIMIT 1`
+    ),
   };
   return _stmts;
 };
@@ -59,6 +67,13 @@ export const weightLogsRepository = {
 
   latest: (userId: number): WeightLog | undefined => {
     return stmts().latest.get(userId) as WeightLog | undefined;
+  },
+
+  findByUserAndDate: (
+    userId: number,
+    date: string
+  ): WeightLog | undefined => {
+    return stmts().findByUserAndDate.get(userId, date) as WeightLog | undefined;
   },
 
   create: (input: WeightLogCreateInput): WeightLog => {

@@ -187,7 +187,7 @@ const SentRow = ({
             disabled={busyId === gift.id}
             className="w-full rounded-md border border-rose-200 bg-white px-2 py-1 text-[11px] font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50"
           >
-            {busyId === gift.id ? 'กำลังยกเลิก…' : 'ยกเลิกหัตถ์การให้นี้'}
+            {busyId === gift.id ? 'กำลังยกเลิก…' : 'ยกเลิกของขวัญนี้'}
           </button>
         </div>
       )}
@@ -251,7 +251,7 @@ export const GiftsPage = () => {
   }, [load]);
 
   const handleCancel = async (id: number) => {
-    if (!window.confirm('ยกเลิกหัตถ์การให้นี้? เครดิตจะถูกคืนทันที')) return;
+    if (!window.confirm('ยกเลิกของขวัญนี้? เครดิตจะถูกคืนทันที')) return;
     setBusyId(id);
     setMessage(null);
     try {
@@ -298,7 +298,7 @@ export const GiftsPage = () => {
       <section className="rounded-xl bg-gradient-to-br from-amber-50 via-white to-brand-50 p-5 shadow-sm">
         <div className="flex items-center gap-2">
           <GiftIcon className="h-5 w-5 text-amber-600" />
-          <h2 className="text-base font-bold text-slate-900">หัตถ์การให้</h2>
+          <h2 className="text-base font-bold text-slate-900">ของขวัญ</h2>
         </div>
         <p className="mt-0.5 text-xs text-slate-500">
           ส่งของขวัญให้เพื่อน หรือดูประวัติของที่คุณได้รับ
