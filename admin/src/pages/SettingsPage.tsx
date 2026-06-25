@@ -20,6 +20,11 @@ const FIELD_LABELS: Record<string, { label: string; hint: string; unit: string }
     hint: 'Displayed below QR (e.g. "MS. TINA SOMTHAI" or company name)',
     unit: '',
   },
+  price_7d_credit: {
+    label: '7 Day Premium',
+    hint: 'Credit cost for the entry-level 7-day premium bundle (1 credit = 1 THB)',
+    unit: 'credit',
+  },
   price_1mo_credit: {
     label: '1 Month Premium',
     hint: 'Credit cost (1 credit = 1 THB)',
@@ -90,6 +95,7 @@ const SECTIONS: Array<{ title: string; keys: string[] }> = [
   {
     title: 'Premium Pricing (in credit)',
     keys: [
+      'price_7d_credit',
       'price_1mo_credit',
       'price_3mo_credit',
       'price_6mo_credit',

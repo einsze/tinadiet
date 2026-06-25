@@ -256,7 +256,7 @@ export type GiftRefusedReason =
   | 'recipient_blocked'
   | 'self_claim';
 
-export type GiftPremiumPayload = { months: 1 | 3 | 6 | 12 };
+export type GiftPremiumPayload = { months: 1 | 3 | 6 | 12 | '7d' };
 export type GiftThemePayload = { theme_slug: string };
 export type GiftPayload = GiftPremiumPayload | GiftThemePayload;
 
@@ -332,6 +332,7 @@ export type SystemSettingKey =
   | 'promptpay_id'
   | 'promptpay_id_type'
   | 'promptpay_receiver_name'
+  | 'price_7d_credit'
   | 'price_1mo_credit'
   | 'price_3mo_credit'
   | 'price_6mo_credit'

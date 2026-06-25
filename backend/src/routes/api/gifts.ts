@@ -18,7 +18,13 @@ import type { GiftPayload } from '../../domain/types.js';
 const router = Router();
 
 const premiumPayloadSchema = z.object({
-  months: z.union([z.literal(1), z.literal(3), z.literal(6), z.literal(12)]),
+  months: z.union([
+    z.literal(1),
+    z.literal(3),
+    z.literal(6),
+    z.literal(12),
+    z.literal('7d'),
+  ]),
 });
 const themePayloadSchema = z.object({
   theme_slug: z.string().min(1).max(40),

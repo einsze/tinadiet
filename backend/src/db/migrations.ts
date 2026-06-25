@@ -400,4 +400,14 @@ export const migrations: ReadonlyArray<Migration> = [
       CREATE INDEX idx_credit_ledger_source ON credit_ledger(source_type, source_ref_id);
     `,
   },
+  {
+    name: '0011_premium_7day_bundle',
+    sql: `
+      -- 7-day premium bundle price. Default 49 credit so it pairs with the
+      -- new 49 THB top-up preset. Admin can edit via /settings; set to 0
+      -- to hide the bundle from the LIFF marketplace.
+      INSERT INTO system_settings (key, value) VALUES
+        ('price_7d_credit', '49');
+    `,
+  },
 ];

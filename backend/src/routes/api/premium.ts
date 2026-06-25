@@ -13,13 +13,22 @@ import { isPremium } from '../../domain/profile.js';
 const router = Router();
 
 const redeemBodySchema = z.object({
-  months: z.union([z.literal(1), z.literal(3), z.literal(6), z.literal(12)]),
+  months: z.union([
+    z.literal(1),
+    z.literal(3),
+    z.literal(6),
+    z.literal(12),
+    z.literal('7d'),
+  ]),
 });
 
 router.get('/bundles', requireAuth, (_req: Request, res: Response) => {
   const prices = getAllBundlePrices();
   res.status(200).json({
+    // `months` carries either a numeric month count or the string '7d' for
+    // the day-based bundle. LIFF treats it as the bundle identifier.
     bundles: [
+      { months: '7d', credit_required: prices['7d'] },
       { months: 1, credit_required: prices[1] },
       { months: 3, credit_required: prices[3] },
       { months: 6, credit_required: prices[6] },
@@ -49,7 +58,7 @@ router.post('/redeem', requireAuth, (req: Request, res: Response) => {
     res.status(400).json({
       error: {
         code: 'BAD_REQUEST',
-        message: 'months must be one of 1, 3, 6, 12',
+        message: 'months must be one of 1, 3, 6, 12, or "7d"',
       },
     });
     return;

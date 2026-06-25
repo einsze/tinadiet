@@ -13,6 +13,7 @@ const ALLOWED_KEYS: ReadonlyArray<SystemSettingKey> = [
   'promptpay_id',
   'promptpay_id_type',
   'promptpay_receiver_name',
+  'price_7d_credit',
   'price_1mo_credit',
   'price_3mo_credit',
   'price_6mo_credit',

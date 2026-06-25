@@ -15,7 +15,7 @@ export type GiftRefusedReason =
   | 'recipient_blocked'
   | 'self_claim';
 
-export type GiftPremiumPayload = { months: 1 | 3 | 6 | 12 };
+export type GiftPremiumPayload = { months: 1 | 3 | 6 | 12 | '7d' };
 export type GiftThemePayload = { theme_slug: ThemeSlug };
 export type GiftPayload = GiftPremiumPayload | GiftThemePayload;
 

@@ -18,11 +18,22 @@ export class PremiumRedemptionError extends Error {
   }
 }
 
-export type PremiumBundle = 1 | 3 | 6 | 12;
+/**
+ * Bundle identifiers: numeric months (1/3/6/12) OR string day bundles ('7d').
+ * Adding new day-based bundles: extend this union + PRICE_KEY_BY_BUNDLE +
+ * ALL_BUNDLES + getAllBundlePrices + computeNewExpiry.
+ */
+export type PremiumBundle = 1 | 3 | 6 | 12 | '7d';
 
-export const ALL_BUNDLES: ReadonlyArray<PremiumBundle> = [1, 3, 6, 12];
+export const ALL_BUNDLES: ReadonlyArray<PremiumBundle> = ['7d', 1, 3, 6, 12];
+
+const VALID_BUNDLE_SET: ReadonlySet<unknown> = new Set<unknown>(ALL_BUNDLES);
+
+export const isValidBundle = (value: unknown): value is PremiumBundle =>
+  VALID_BUNDLE_SET.has(value);
 
 const PRICE_KEY_BY_BUNDLE: Record<PremiumBundle, SystemSettingKey> = {
+  '7d': 'price_7d_credit',
   1: 'price_1mo_credit',
   3: 'price_3mo_credit',
   6: 'price_6mo_credit',
@@ -34,7 +45,7 @@ export const getBundlePriceCredit = (bundle: PremiumBundle): number => {
   const n = systemSettingsRepository.getNumber(key, 0);
   if (n <= 0) {
     throw new PremiumRedemptionError(
-      `Bundle ${bundle}mo price not configured (key ${key})`,
+      `Bundle ${bundle} price not configured (key ${key})`,
       'BUNDLE_NOT_CONFIGURED'
     );
   }
@@ -42,6 +53,7 @@ export const getBundlePriceCredit = (bundle: PremiumBundle): number => {
 };
 
 export const getAllBundlePrices = (): Record<PremiumBundle, number> => ({
+  '7d': systemSettingsRepository.getNumber('price_7d_credit', 0),
   1: systemSettingsRepository.getNumber('price_1mo_credit', 0),
   3: systemSettingsRepository.getNumber('price_3mo_credit', 0),
   6: systemSettingsRepository.getNumber('price_6mo_credit', 0),
@@ -54,9 +66,17 @@ const addMonthsIso = (fromIso: string, months: number): string => {
   return d.toISOString();
 };
 
+const addDaysIso = (fromIso: string, days: number): string => {
+  const d = new Date(fromIso);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString();
+};
+
 /**
- * Compute new premium_expires_at after redeeming N months of premium.
- * Stacking rule: max(now, current_expiry) + months
+ * Compute new premium_expires_at after redeeming a bundle.
+ * Stacking rule: max(now, current_expiry) + bundle_duration
+ *   - Numeric bundle = N months
+ *   - '7d' bundle    = 7 days
  */
 export const computeNewExpiry = (
   user: User,
@@ -68,7 +88,16 @@ export const computeNewExpiry = (
       ? new Date(user.premium_expires_at).getTime()
       : 0;
   const baseMs = Math.max(currentExpiryMs, now.getTime());
-  return addMonthsIso(new Date(baseMs).toISOString(), bundle);
+  const baseIso = new Date(baseMs).toISOString();
+  if (bundle === '7d') {
+    return addDaysIso(baseIso, 7);
+  }
+  return addMonthsIso(baseIso, bundle);
+};
+
+const describeBundle = (bundle: PremiumBundle): string => {
+  if (bundle === '7d') return '7 days';
+  return `${bundle} month(s)`;
 };
 
 export type RedeemResult = {
@@ -111,7 +140,7 @@ export const redeemPremium = (
       source_type: 'redeem_premium',
       source_ref_id: null,
       admin_user_id: null,
-      note: `Redeemed ${bundle} month(s) premium`,
+      note: `Redeemed ${describeBundle(bundle)} premium`,
     });
 
     const updatedUser = userRepository.applyPremium(userId, newExpiry);

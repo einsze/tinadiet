@@ -61,17 +61,24 @@ export type StartManualTopupResponse = {
   promptpay_receiver_name: string;
 };
 
+export type PremiumBundleId = 1 | 3 | 6 | 12 | '7d';
+
 export type PremiumBundle = {
-  months: 1 | 3 | 6 | 12;
+  months: PremiumBundleId;
   credit_required: number;
 };
 
 export type RedeemPremiumResponse = {
-  bundle_months: 1 | 3 | 6 | 12;
+  bundle_months: PremiumBundleId;
   credit_spent_satang: number;
   premium_expires_at: string;
   credit_balance_satang: number;
   is_premium: boolean;
+};
+
+export const formatBundleLabel = (id: PremiumBundleId): string => {
+  if (id === '7d') return '7 วัน';
+  return `${id} เดือน`;
 };
 
 export const formatCredit = (satang: number): string =>

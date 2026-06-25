@@ -23,9 +23,14 @@ import type {
   ManualPaymentSubmission,
   ManualPaymentStatus,
   PremiumBundle,
+  PremiumBundleId,
   WalletState,
 } from '../types/wallet.js';
-import { formatCredit, formatStatusLabel } from '../types/wallet.js';
+import {
+  formatBundleLabel,
+  formatCredit,
+  formatStatusLabel,
+} from '../types/wallet.js';
 
 type LoadedData = {
   wallet: WalletState;
@@ -111,8 +116,8 @@ const BundleButton = ({
 }: {
   bundle: PremiumBundle;
   balance: number;
-  onRedeem: (months: 1 | 3 | 6 | 12) => void;
-  onGift: (months: 1 | 3 | 6 | 12) => void;
+  onRedeem: (months: PremiumBundleId) => void;
+  onGift: (months: PremiumBundleId) => void;
   pending: boolean;
 }) => {
   const required = bundle.credit_required * 100; // satang
@@ -128,7 +133,7 @@ const BundleButton = ({
     >
       <div className="flex items-center justify-between px-4 pt-3">
         <div className="text-sm font-semibold text-slate-900">
-          Premium {bundle.months} เดือน
+          Premium {formatBundleLabel(bundle.months)}
         </div>
         <div className="text-xs font-bold text-amber-700">
           {bundle.credit_required} credit
@@ -164,13 +169,13 @@ const BundleButton = ({
 
 export const PremiumSection = () => {
   const [state, setState] = useState<State>({ kind: 'loading' });
-  const [redeemPending, setRedeemPending] = useState<false | number>(false);
+  const [redeemPending, setRedeemPending] = useState<boolean>(false);
   const [redeemMessage, setRedeemMessage] = useState<string | null>(null);
   const [premiumExpiresAt, setPremiumExpiresAt] = useState<string | null>(
     null
   );
   const [giftBundle, setGiftBundle] = useState<{
-    months: 1 | 3 | 6 | 12;
+    months: PremiumBundleId;
     credit_required: number;
   } | null>(null);
   const navigate = useNavigate();
@@ -205,18 +210,19 @@ export const PremiumSection = () => {
     void load();
   }, [load]);
 
-  const handleRedeem = async (months: 1 | 3 | 6 | 12) => {
+  const handleRedeem = async (months: PremiumBundleId) => {
+    const label = formatBundleLabel(months);
     const ok = window.confirm(
-      `ใช้เครดิตแลก Premium ${months} เดือน?\nเครดิตจะถูกหักจากยอดของคุณ`
+      `ใช้เครดิตแลก Premium ${label}?\nเครดิตจะถูกหักจากยอดของคุณ`
     );
     if (!ok) return;
-    setRedeemPending(months);
+    setRedeemPending(true);
     setRedeemMessage(null);
     try {
       const res = await premiumApi.redeem(months);
       setPremiumExpiresAt(res.premium_expires_at);
       setRedeemMessage(
-        `แลก Premium ${months} เดือน สำเร็จ! หมดอายุ ${formatDate(res.premium_expires_at)}`
+        `แลก Premium ${label} สำเร็จ! หมดอายุ ${formatDate(res.premium_expires_at)}`
       );
       // Reactive wallet update: balance display reads from session.user.
       // setUser propagates new balance immediately; background load() refreshes
@@ -336,7 +342,7 @@ export const PremiumSection = () => {
               onGift={(months) =>
                 setGiftBundle({ months, credit_required: b.credit_required })
               }
-              pending={redeemPending !== false}
+              pending={redeemPending}
             />
           ))}
         </div>
@@ -392,7 +398,7 @@ export const PremiumSection = () => {
           giftType="premium"
           payload={{ months: giftBundle.months }}
           priceCredit={giftBundle.credit_required}
-          subjectLabel={`Premium ${giftBundle.months} เดือน`}
+          subjectLabel={`Premium ${formatBundleLabel(giftBundle.months)}`}
         />
       )}
     </div>

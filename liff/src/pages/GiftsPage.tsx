@@ -52,7 +52,9 @@ const describePayload = (
   payload: GiftPayload
 ): string => {
   if (gift_type === 'premium' && 'months' in payload) {
-    return `Premium ${payload.months} เดือน`;
+    const m = payload.months;
+    const label = m === '7d' ? '7 วัน' : `${m} เดือน`;
+    return `Premium ${label}`;
   }
   if (gift_type === 'theme' && 'theme_slug' in payload) {
     const meta =

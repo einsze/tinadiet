@@ -7,9 +7,8 @@ import { userThemesRepository } from '../repositories/user_themes.js';
 import { lineClient } from '../line/client.js';
 import { spendCredit, grantCredit } from './credit.js';
 import {
-  ALL_BUNDLES,
+  isValidBundle,
   getBundlePriceCredit,
-  type PremiumBundle,
 } from './premium_redemption.js';
 import {
   getThemePriceCredit,
@@ -83,20 +82,17 @@ const validatePayload = (
 ): { priceCredit: number } => {
   if (gift_type === 'premium') {
     const p = payload as GiftPremiumPayload;
-    if (
-      !ALL_BUNDLES.includes(p.months as PremiumBundle) ||
-      ![1, 3, 6, 12].includes(p.months)
-    ) {
+    if (!isValidBundle(p.months)) {
       throw new GiftError(
-        `Premium gift months must be 1, 3, 6, or 12`,
+        `Premium gift months must be one of 1, 3, 6, 12, or "7d"`,
         'INVALID_PAYLOAD'
       );
     }
     try {
-      return { priceCredit: getBundlePriceCredit(p.months as PremiumBundle) };
+      return { priceCredit: getBundlePriceCredit(p.months) };
     } catch {
       throw new GiftError(
-        `Premium bundle ${p.months} months price not configured`,
+        `Premium bundle ${p.months} price not configured`,
         'PRICE_NOT_CONFIGURED'
       );
     }
@@ -398,18 +394,27 @@ export const claimGift = (
 
   // premium
   const premiumPayload = payload as GiftPremiumPayload;
-  const months = premiumPayload.months;
+  const bundle = premiumPayload.months;
   const previousExpiryMs =
     recipient.premium_expires_at !== null
       ? new Date(recipient.premium_expires_at).getTime()
       : 0;
   const baseMs = Math.max(previousExpiryMs, now.getTime());
   const newExpiryDate = new Date(baseMs);
-  newExpiryDate.setUTCMonth(newExpiryDate.getUTCMonth() + months);
+  if (bundle === '7d') {
+    newExpiryDate.setUTCDate(newExpiryDate.getUTCDate() + 7);
+  } else {
+    newExpiryDate.setUTCMonth(newExpiryDate.getUTCMonth() + bundle);
+  }
   const newExpiryIso = newExpiryDate.toISOString();
   const msAdded = newExpiryDate.getTime() - baseMs;
   // approximate fallback if month math gives weird drift
-  const safeMsAdded = msAdded > 0 ? msAdded : monthsToApproxMs(months);
+  const safeMsAdded =
+    msAdded > 0
+      ? msAdded
+      : bundle === '7d'
+        ? 7 * 86400 * 1000
+        : monthsToApproxMs(bundle);
 
   const tx = db.transaction(() => {
     const updatedUser = userRepository.applyPremium(recipient.id, newExpiryIso);
@@ -558,7 +563,9 @@ const safePush = async (
 const describeGift = (gift: Gift): string => {
   const payload = parseGiftPayload(gift);
   if (gift.gift_type === 'premium') {
-    return `Premium ${(payload as GiftPremiumPayload).months} เดือน`;
+    const m = (payload as GiftPremiumPayload).months;
+    const label = m === '7d' ? '7 วัน' : `${m} เดือน`;
+    return `Premium ${label}`;
   }
   return `theme ${(payload as GiftThemePayload).theme_slug}`;
 };

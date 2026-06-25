@@ -28,8 +28,10 @@ const describePayload = (
   payload: GiftPayload
 ): { label: string; subtitle: string } => {
   if (gift_type === 'premium' && 'months' in payload) {
+    const m = payload.months;
+    const label = m === '7d' ? '7 วัน' : `${m} เดือน`;
     return {
-      label: `Premium ${payload.months} เดือน`,
+      label: `Premium ${label}`,
       subtitle: 'เข้าถึงฟีเจอร์ Premium ทั้งหมดเพิ่มอีก',
     };
   }
