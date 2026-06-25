@@ -4,7 +4,10 @@ Thai-first AI nutrition coach delivered through LINE LIFF + Messaging API.
 End-users log food via chat or photo, track macros against personalized
 goals, and consult with Tina (premium).
 
-> 📖 **Full developer documentation**: [tinadiet.com/documentation](https://tinadiet.com/docsfordevtina/)
+Internal developer documentation lives in this repository under
+`projects/docs/src/content/docs/docsfordevtina/` (architecture, backend,
+LIFF, admin, payments, deployment, ops, reference, plus the
+[maintenance guide](docs/src/content/docs/docsfordevtina/ops/maintenance.md)).
 
 ## Status — production
 
@@ -13,11 +16,12 @@ goals, and consult with Tina (premium).
 | Backend API | [api.tinadiet.com](https://api.tinadiet.com/healthz) | Railway · Express · better-sqlite3 |
 | LIFF app | [app.tinadiet.com](https://app.tinadiet.com) | Cloudflare Workers · Vite · React · Tailwind |
 | **Admin dashboard** | **[admin.tinadiet.com](https://admin.tinadiet.com)** | Cloudflare Workers · Vite · React · Tailwind |
-| Landing + docs | [tinadiet.com](https://tinadiet.com) | Cloudflare Pages · Astro · Starlight |
+| Public landing | [tinadiet.com](https://tinadiet.com) | Cloudflare Pages · Astro · Starlight (internal docs at obscure path, not linked from landing) |
 | LINE OA | `@913civqx` (TinaDiet) | LINE Messaging API |
 
-**Sprints closed**: 1, 2, 3, 4 (M1-M3), 5 (M1-M3), 6 (M1-M6) + 2026-06-25
-follow-up (History page, Support mode, Thai copy refresh).
+**Sprints closed**: 1, 2, 3, 4 (M1-M3), 5 (M1-M3), 6 (M1-M6) + 2026-06-25/26
+follow-ups (History page, Support mode, Thai copy refresh, Dependabot
+triage, docs sweep, maintenance guide).
 
 **🟢 LAUNCH-READY** — manual PromptPay payment end-to-end validated in
 production 2026-06-25 (real Thai banking app PromptPay scan → slip upload
@@ -40,16 +44,24 @@ window for team manual reply).
 
 **Security posture (2026-06-26)**: backend, LIFF, and admin = 0 local npm
 audit vulnerabilities. Dependabot Phase 1 + Phase 2 triage closed
-10 / 24 alerts (commits `ef22a54` + `c60bb4f`). Remaining 14 alerts are
-all docs-site Astro chain — DEV-only build dependency, not exposed to
-production runtime. Accepted as risk pending dedicated Astro 5→6 +
-Starlight 0.30→0.40+ upgrade session.
+~18 / 24 alerts (commits `ef22a54` + `c60bb4f`); GitHub re-scan settled
+at **6 remaining alerts**, all docs-site Astro chain — DEV-only build
+dependency, not exposed to production runtime. Accepted as risk pending
+dedicated Astro 5→6 + Starlight 0.30→0.40+ upgrade session.
 
 **Open**: production hardening (Sentry, rate limiting on /webhooks +
 /api), Omise LIVE flip when Thai business KYC done, lawyer review of
 privacy/terms templates to produce Thai version, configure
 `support@tinadiet.com` email forwarding via Cloudflare Email Routing,
 Astro upgrade for docs site (deferred).
+
+**Maintenance cadence** (full guide in `docs/.../ops/maintenance.md`):
+daily 5–10 min (operator review pending top-ups, monitor LINE Chat
+support), weekly 15–20 min (DB health snapshot + deploy/Dependabot
+glance), monthly 1–2 hrs (`npm audit fix` per project + credit ledger
+reconciliation + disk/cost check), quarterly 3–4 hrs (PDPA flow test +
+real-bank PromptPay scan + invariant audit), annual ~1 day (major
+version upgrades + Thai legal review + backup drill).
 
 ## Repository layout
 
@@ -88,18 +100,24 @@ Each `projects/<name>/` is independently buildable and deployable.
 Separate `package.json`, separate dependency trees, separate auto-deploy
 on push to `main`.
 
-## Quick links
+## Quick links (in-repo)
 
-- **🏗 Architecture overview**: [tinadiet.com/docsfordevtina/architecture/overview](https://tinadiet.com/docsfordevtina/architecture/overview/)
-- **💻 Local setup**: [tinadiet.com/docsfordevtina/getting-started/local-setup](https://tinadiet.com/docsfordevtina/getting-started/local-setup/)
-- **💰 Payments (Omise)**: [tinadiet.com/docsfordevtina/payments/overview](https://tinadiet.com/docsfordevtina/payments/overview/)
-- **🚀 Deployment**: [tinadiet.com/docsfordevtina/deployment/overview](https://tinadiet.com/docsfordevtina/deployment/overview/)
-- **🔧 DB queries / ops**: [tinadiet.com/docsfordevtina/ops/db-queries](https://tinadiet.com/docsfordevtina/ops/db-queries/)
+In-repo markdown — readable on GitHub without leaving the source tree:
+
+- 🏗 Architecture overview → `docs/src/content/docs/docsfordevtina/architecture/overview.md`
+- 🧱 Key invariants → `docs/src/content/docs/docsfordevtina/architecture/key-invariants.md`
+- 💻 Local setup → `docs/src/content/docs/docsfordevtina/getting-started/local-setup.md`
+- 💰 Payments + credit system → `docs/src/content/docs/docsfordevtina/payments/`
+- 🚀 Deployment runbooks → `docs/src/content/docs/docsfordevtina/deployment/`
+- 🔧 DB queries / ops → `docs/src/content/docs/docsfordevtina/ops/db-queries.md`
+- 🛠 Maintenance guide → `docs/src/content/docs/docsfordevtina/ops/maintenance.md`
+- 🌱 Env vars reference → `docs/src/content/docs/docsfordevtina/reference/env-vars.md`
 
 ## Setup (for collaborators)
 
 Prereqs: Node 22+, Git, accounts at GitHub + LINE Developers + Omise +
-OpenAI + Cloudflare + Railway. See [Prerequisites](https://tinadiet.com/docsfordevtina/getting-started/prerequisites/).
+OpenAI + Cloudflare + Railway. Detailed prereqs walkthrough lives at
+`docs/src/content/docs/docsfordevtina/getting-started/prerequisites.md`.
 
 ```bash
 git clone https://github.com/einsze/tinadiet.git
@@ -124,18 +142,17 @@ npm run dev                # http://localhost:4321
 ```
 
 For full local setup including cloudflared tunnel for LINE webhook,
-see the [Local Setup](https://tinadiet.com/docsfordevtina/getting-started/local-setup/)
-docs page.
+see `docs/src/content/docs/docsfordevtina/getting-started/local-setup.md`.
 
 ## Stack reference
 
 - **Runtime**: Node.js 22 LTS (see `.nvmrc`), npm 10+
 - **Language**: TypeScript 5.6 strict, ESM modules
 - **DB**: SQLite via `better-sqlite3` on Railway volume `/data/app.db`
-- **Auth**: LINE Login → backend session JWT (HS256)
+- **Auth**: LINE Login → backend session JWT (HS256); admin = bcryptjs + 8h JWT (separate audience)
 - **AI**: OpenAI `gpt-4o-mini` (text), `gpt-4o` (vision)
-- **Payments**: Omise REST API (no SDK; native fetch wrapper)
-- **Cron**: `node-cron` for daily summary, weekly summary, expire premium
+- **Payments (active)**: manual PromptPay + credit ledger; Omise REST + Stripe SDK dormant
+- **Cron**: `node-cron`, 5 jobs in `Asia/Bangkok` — daily summary (21:00), weekly summary (Mon 08:00), expire premium (02:00), renewal reminders (10:00), expire gifts (03:00)
 - **Branch protection**: enabled on `main`, owner bypasses for solo dev
 
 ## Security & contribution
