@@ -27,6 +27,7 @@ import type {
   WalletState,
 } from '../types/wallet.js';
 import {
+  computeDiscountPct,
   formatBundleLabel,
   formatCredit,
   formatStatusLabel,
@@ -123,20 +124,37 @@ const BundleButton = ({
   const required = bundle.credit_required * 100; // satang
   const enough = balance >= required;
   const disabled = !enough || pending || bundle.credit_required <= 0;
+  const discountPct = computeDiscountPct(
+    bundle.original_credit,
+    bundle.credit_required
+  );
+  const hasDiscount = discountPct !== null;
   return (
     <div
-      className={`rounded-lg border transition ${
+      className={`relative rounded-lg border transition ${
         enough
           ? 'border-amber-200 bg-white'
           : 'border-slate-200 bg-slate-50'
       }`}
     >
+      {hasDiscount && (
+        <span className="absolute -top-2 -right-2 z-10 rounded-full bg-gradient-to-br from-rose-500 to-rose-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-md ring-2 ring-white">
+          −{discountPct}% OFF
+        </span>
+      )}
       <div className="flex items-center justify-between px-4 pt-3">
         <div className="text-sm font-semibold text-slate-900">
           Premium {formatBundleLabel(bundle.months)}
         </div>
-        <div className="text-xs font-bold text-amber-700">
-          {bundle.credit_required} credit
+        <div className="flex items-center gap-1.5 text-xs">
+          {hasDiscount && (
+            <span className="text-slate-400 line-through">
+              {bundle.original_credit}
+            </span>
+          )}
+          <span className="font-bold text-amber-700">
+            {bundle.credit_required} credit
+          </span>
         </div>
       </div>
       <div className="px-4 mt-1 text-[10px] text-slate-500">

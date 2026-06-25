@@ -410,4 +410,20 @@ export const migrations: ReadonlyArray<Migration> = [
         ('price_7d_credit', '49');
     `,
   },
+  {
+    name: '0012_premium_original_prices',
+    sql: `
+      -- "Original" (before-discount) prices per bundle. Default 0 = no
+      -- discount badge shown. Superadmin sets via /settings → LIFF renders
+      -- strikethrough + "-X% OFF" badge auto-calculated from
+      -- (original - current) / original. Affects display only — actual
+      -- charge stays in price_X_credit.
+      INSERT INTO system_settings (key, value) VALUES
+        ('original_price_7d_credit',   '0'),
+        ('original_price_1mo_credit',  '0'),
+        ('original_price_3mo_credit',  '0'),
+        ('original_price_6mo_credit',  '0'),
+        ('original_price_12mo_credit', '0');
+    `,
+  },
 ];

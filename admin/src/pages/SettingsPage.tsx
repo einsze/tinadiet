@@ -45,6 +45,31 @@ const FIELD_LABELS: Record<string, { label: string; hint: string; unit: string }
     hint: 'Credit cost',
     unit: 'credit',
   },
+  original_price_7d_credit: {
+    label: '7 Day — Original Price',
+    hint: 'Set higher than current price to show a strikethrough + "−X% OFF" badge on LIFF. Set 0 to hide the badge.',
+    unit: 'credit',
+  },
+  original_price_1mo_credit: {
+    label: '1 Month — Original Price',
+    hint: 'Set higher than current price to show discount badge. Set 0 to hide.',
+    unit: 'credit',
+  },
+  original_price_3mo_credit: {
+    label: '3 Months — Original Price',
+    hint: 'Set higher than current price to show discount badge. Set 0 to hide.',
+    unit: 'credit',
+  },
+  original_price_6mo_credit: {
+    label: '6 Months — Original Price',
+    hint: 'Set higher than current price to show discount badge. Set 0 to hide.',
+    unit: 'credit',
+  },
+  original_price_12mo_credit: {
+    label: '12 Months — Original Price',
+    hint: 'Set higher than current price to show discount badge. Set 0 to hide.',
+    unit: 'credit',
+  },
   high_value_threshold_satang: {
     label: 'High-value threshold',
     hint: 'Operators cannot approve amounts above this without superadmin (in satang, 100 satang = 1 THB)',
@@ -100,6 +125,16 @@ const SECTIONS: Array<{ title: string; keys: string[] }> = [
       'price_3mo_credit',
       'price_6mo_credit',
       'price_12mo_credit',
+    ],
+  },
+  {
+    title: 'Promo Display — Original Prices (LIFF discount badge)',
+    keys: [
+      'original_price_7d_credit',
+      'original_price_1mo_credit',
+      'original_price_3mo_credit',
+      'original_price_6mo_credit',
+      'original_price_12mo_credit',
     ],
   },
   {

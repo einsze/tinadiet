@@ -68,6 +68,24 @@ export type PremiumBundleId = 1 | 3 | 6 | 12 | '7d';
 export type PremiumBundle = {
   months: PremiumBundleId;
   credit_required: number;
+  /** "Before discount" price, 0 = no discount badge. */
+  original_credit: number;
+};
+
+/**
+ * Compute discount percent (rounded) when original > current. Returns null
+ * if no discount should be shown.
+ */
+export const computeDiscountPct = (
+  originalCredit: number,
+  currentCredit: number
+): number | null => {
+  if (originalCredit <= 0 || currentCredit <= 0) return null;
+  if (originalCredit <= currentCredit) return null;
+  const pct = Math.round(
+    ((originalCredit - currentCredit) / originalCredit) * 100
+  );
+  return pct > 0 ? pct : null;
 };
 
 export type RedeemPremiumResponse = {

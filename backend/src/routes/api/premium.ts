@@ -5,6 +5,7 @@ import { userRepository } from '../../repositories/users.js';
 import {
   redeemPremium,
   getAllBundlePrices,
+  getAllBundleOriginalPrices,
   PremiumRedemptionError,
   type PremiumBundle,
 } from '../../services/premium_redemption.js';
@@ -24,15 +25,17 @@ const redeemBodySchema = z.object({
 
 router.get('/bundles', requireAuth, (_req: Request, res: Response) => {
   const prices = getAllBundlePrices();
+  const original = getAllBundleOriginalPrices();
   res.status(200).json({
     // `months` carries either a numeric month count or the string '7d' for
     // the day-based bundle. LIFF treats it as the bundle identifier.
+    // `original_credit` = 0 means no discount badge; LIFF skips render.
     bundles: [
-      { months: '7d', credit_required: prices['7d'] },
-      { months: 1, credit_required: prices[1] },
-      { months: 3, credit_required: prices[3] },
-      { months: 6, credit_required: prices[6] },
-      { months: 12, credit_required: prices[12] },
+      { months: '7d', credit_required: prices['7d'], original_credit: original['7d'] },
+      { months: 1,    credit_required: prices[1],    original_credit: original[1] },
+      { months: 3,    credit_required: prices[3],    original_credit: original[3] },
+      { months: 6,    credit_required: prices[6],    original_credit: original[6] },
+      { months: 12,   credit_required: prices[12],   original_credit: original[12] },
     ],
   });
 });

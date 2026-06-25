@@ -60,6 +60,19 @@ export const getAllBundlePrices = (): Record<PremiumBundle, number> => ({
   12: systemSettingsRepository.getNumber('price_12mo_credit', 0),
 });
 
+/**
+ * "Original" (before-discount) prices. 0 means no discount; LIFF skips
+ * rendering the strikethrough + badge. Display-only — actual charge always
+ * comes from getAllBundlePrices().
+ */
+export const getAllBundleOriginalPrices = (): Record<PremiumBundle, number> => ({
+  '7d': systemSettingsRepository.getNumber('original_price_7d_credit', 0),
+  1: systemSettingsRepository.getNumber('original_price_1mo_credit', 0),
+  3: systemSettingsRepository.getNumber('original_price_3mo_credit', 0),
+  6: systemSettingsRepository.getNumber('original_price_6mo_credit', 0),
+  12: systemSettingsRepository.getNumber('original_price_12mo_credit', 0),
+});
+
 const addMonthsIso = (fromIso: string, months: number): string => {
   const d = new Date(fromIso);
   d.setUTCMonth(d.getUTCMonth() + months);
