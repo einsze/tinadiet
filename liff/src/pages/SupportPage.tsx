@@ -58,19 +58,23 @@ export const SupportPage = () => {
         <p className="mt-0.5 text-xs text-slate-500">
           ติดปัญหาหรือมีข้อเสนอแนะ?
         </p>
-        <div className="mt-4 space-y-3">
-          <a
-            href="mailto:support@tinadiet.com"
-            className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm transition hover:border-brand-300 hover:bg-brand-50"
-          >
-            <span className="text-xl">📧</span>
-            <span className="flex-1">
-              <span className="block font-semibold text-slate-900">Email</span>
-              <span className="block text-xs text-slate-500">
-                support@tinadiet.com
-              </span>
-            </span>
-          </a>
+        <div className="mt-4 rounded-lg border border-brand-200 bg-brand-50/60 p-4 text-sm">
+          <div className="flex items-start gap-3">
+            <span className="text-xl">🛟</span>
+            <div className="flex-1">
+              <p className="font-semibold text-slate-900">
+                พิมพ์{' '}
+                <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs text-brand-700 ring-1 ring-brand-200">
+                  Support
+                </code>{' '}
+                ในแชต LINE Tina
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                Tina จะตอบอัตโนมัติให้คุณพิมพ์ปัญหาที่ต้องการความช่วยเหลือ
+                จากนั้นทีมงาน Tina จะติดต่อกลับโดยเร็วที่สุดค่ะ 💖
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

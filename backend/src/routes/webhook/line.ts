@@ -59,6 +59,24 @@ const profileGateText = (): string =>
 const premiumGatePhotoText = (): string =>
   `📷 ฟีเจอร์วิเคราะห์อาหารจากรูป เป็นสิทธิ์สำหรับสมาชิก Premium นะคะ 💖\n\n🎉 ทดลอง Premium เพียง 49 บาท / 7 วัน\n\nสิ่งที่คุณจะได้รับ:\n\n📸 ส่งรูปอาหารให้ Tina วิเคราะห์\n🍚 ดูแคลอรี่ โปรตีน คาร์บ และไขมัน\n💬 ถามคำถามด้านโภชนาการได้ไม่จำกัด\n🎯 ช่วยคุมอาหารและลดน้ำหนักได้ง่ายขึ้น\n\nเฉลี่ยเพียงวันละ 7 บาทเท่านั้น ☺️\n\n👇 แตะปุ่ม “Premium” ด้านล่างเพื่อปลดล็อกฟีเจอร์ได้เลย\n\nหรือพิมพ์ชื่ออาหารให้ Tina คำนวณแคลได้ฟรีนะคะ 🐱💕`;
 
+const SUPPORT_TRIGGER_RE = /^\s*support\s*$/i;
+const SUPPORT_EXIT_RE = /^\s*(exit|cancel|ออก|ยกเลิก|จบ|เสร็จ)\s*$/i;
+const SUPPORT_MODE_DURATION_MS = 30 * 60 * 1000;
+
+const isInSupportMode = (user: User, now: Date = new Date()): boolean => {
+  if (user.support_mode_until === null) return false;
+  return new Date(user.support_mode_until).getTime() > now.getTime();
+};
+
+const supportEnterText = (): string =>
+  `🛟 ทีม Tina ยินดีช่วยเหลือค่ะ\n\nกรุณาพิมพ์ปัญหาหรือคำถามที่คุณต้องการให้ทีมช่วยเหลือมาในข้อความถัดไปได้เลยค่ะ ทีมงานจะติดต่อกลับโดยเร็วที่สุดนะคะ 💖\n\n(โหมดติดต่อทีมจะทำงาน 30 นาที — พิมพ์ "exit" หรือ "ออก" เพื่อกลับสู่การคุยกับ Tina ตามปกติ)`;
+
+const supportAckText = (): string =>
+  `✅ ได้รับข้อความของคุณแล้วค่ะ\n\nทีม Tina จะติดต่อกลับโดยเร็วที่สุดนะคะ ขอบคุณที่อดทนรอค่ะ 💖\n\n(หากต้องการกลับมาใช้งานปกติ พิมพ์ "exit" หรือ "ออก")`;
+
+const supportExitText = (): string =>
+  `🌷 ออกจากโหมดติดต่อทีมแล้วค่ะ\n\nกลับมาบันทึกอาหารกับ Tina ได้เลยค่ะ ✨`;
+
 const premiumGateConsultationText = (): string =>
   `💬 ฟีเจอร์ถามคำปรึกษาด้านโภชนาการ เป็นสิทธิ์สำหรับสมาชิก Premium นะคะ 💖\n\n🎉 ทดลอง Premium เพียง 49 บาท / 7 วัน\n\nสิ่งที่คุณจะได้รับ:\n\n📸 ส่งรูปอาหารให้ Tina วิเคราะห์\n🍚 ดูแคลอรี่ โปรตีน คาร์บ และไขมัน\n💬 ถามคำถามด้านโภชนาการได้ไม่จำกัด\n🎯 ช่วยคุมอาหารและลดน้ำหนักได้ง่ายขึ้น\n\nเฉลี่ยเพียงวันละ 7 บาทเท่านั้น ☺️\n\n👇 แตะปุ่ม “Premium” ด้านล่างเพื่อปลดล็อกฟีเจอร์ได้เลย\n\nหรือพิมพ์ชื่ออาหารให้ Tina คำนวณแคลได้ฟรีนะคะ 🐱💕`;
 
@@ -469,6 +487,57 @@ const handleTextEvent = async (
     })
   );
 
+  if (isInSupportMode(user)) {
+    if (SUPPORT_EXIT_RE.test(text.trim())) {
+      userRepository.clearSupportMode(user.id);
+      console.log(
+        JSON.stringify({
+          level: 'info',
+          msg: 'webhook.support.exit',
+          db_user_id: user.id,
+        })
+      );
+      await lineClient.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{ type: 'text', text: supportExitText() }],
+      });
+      return;
+    }
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.support.message_received',
+        db_user_id: user.id,
+        text_length: text.length,
+      })
+    );
+    await lineClient.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{ type: 'text', text: supportAckText() }],
+    });
+    return;
+  }
+
+  if (SUPPORT_TRIGGER_RE.test(text.trim())) {
+    const untilIso = new Date(
+      Date.now() + SUPPORT_MODE_DURATION_MS
+    ).toISOString();
+    userRepository.setSupportMode(user.id, untilIso);
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.support.enter',
+        db_user_id: user.id,
+        until: untilIso,
+      })
+    );
+    await lineClient.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{ type: 'text', text: supportEnterText() }],
+    });
+    return;
+  }
+
   if (!isProfileComplete(user)) {
     console.log(
       JSON.stringify({
@@ -627,6 +696,21 @@ const handleImageEvent = async (
   if (!lineUserId) return;
 
   const user = userRepository.upsertFromLine({ line_user_id: lineUserId });
+
+  if (isInSupportMode(user)) {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'webhook.support.image_received',
+        db_user_id: user.id,
+      })
+    );
+    await lineClient.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{ type: 'text', text: supportAckText() }],
+    });
+    return;
+  }
 
   if (!isProfileComplete(user)) {
     console.log(

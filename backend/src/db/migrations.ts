@@ -426,4 +426,10 @@ export const migrations: ReadonlyArray<Migration> = [
         ('original_price_12mo_credit', '0');
     `,
   },
+  {
+    name: '0013_users_support_mode',
+    sql: `
+      ALTER TABLE users ADD COLUMN support_mode_until TEXT;
+    `,
+  },
 ];

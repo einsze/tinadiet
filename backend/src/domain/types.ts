@@ -99,6 +99,7 @@ export type User = {
   abuse_warning_count: number;
   is_blocked: boolean;
   active_theme_slug: string | null;
+  support_mode_until: string | null;
   created_at: string;
   updated_at: string;
 };

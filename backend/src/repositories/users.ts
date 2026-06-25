@@ -13,7 +13,7 @@ const USER_COLUMNS = `
   locale, timezone,
   plan, premium_expires_at, stripe_customer_id, omise_customer_id,
   credit_balance_satang, abuse_warning_count, is_blocked,
-  active_theme_slug,
+  active_theme_slug, support_mode_until,
   created_at, updated_at
 `;
 
@@ -42,6 +42,8 @@ type Stmts = {
   clearAbuseCount: Statement;
   setBlocked: Statement;
   setActiveTheme: Statement;
+  setSupportMode: Statement;
+  clearSupportMode: Statement;
 };
 
 type RawUser = Omit<User, 'is_blocked'> & { is_blocked: number };
@@ -191,6 +193,16 @@ const stmts = (): Stmts => {
     setActiveTheme: db.prepare(
       `UPDATE users
        SET active_theme_slug = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    ),
+    setSupportMode: db.prepare(
+      `UPDATE users
+       SET support_mode_until = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    ),
+    clearSupportMode: db.prepare(
+      `UPDATE users
+       SET support_mode_until = NULL, updated_at = datetime('now')
        WHERE id = ?`
     ),
   };
@@ -358,6 +370,19 @@ export const userRepository = {
     themeSlug: string | null
   ): User | undefined => {
     stmts().setActiveTheme.run(themeSlug, userId);
+    return findByIdHydrated(userId);
+  },
+
+  setSupportMode: (
+    userId: number,
+    untilIso: string
+  ): User | undefined => {
+    stmts().setSupportMode.run(untilIso, userId);
+    return findByIdHydrated(userId);
+  },
+
+  clearSupportMode: (userId: number): User | undefined => {
+    stmts().clearSupportMode.run(userId);
     return findByIdHydrated(userId);
   },
 
