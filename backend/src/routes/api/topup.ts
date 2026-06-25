@@ -201,6 +201,113 @@ router.post(
   }
 );
 
+/**
+ * Resume in-progress top-up. If the user has an awaiting_slip submission,
+ * regenerate the QR for it and return the full charge payload — same shape
+ * as POST /manual/start. Returns null if no in-progress top-up exists.
+ */
+router.get(
+  '/manual/current',
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const session = req.session;
+    if (!session) {
+      res
+        .status(401)
+        .json({ error: { code: 'UNAUTHORIZED', message: 'No session' } });
+      return;
+    }
+    const pending = manualPaymentsRepository.findAwaitingSlipByUser(session.uid);
+    if (pending === undefined) {
+      res.status(200).json({ current: null });
+      return;
+    }
+    try {
+      const qr = await generatePromptPayQr(pending.requested_amount_satang);
+      res.status(200).json({
+        current: {
+          payment_id: pending.id,
+          amount_thb: pending.requested_amount_satang / 100,
+          amount_satang: pending.requested_amount_satang,
+          qr_data_url: qr.data_url,
+          promptpay_receiver_id: qr.receiver_id,
+          promptpay_receiver_name: qr.receiver_name,
+          created_at: pending.created_at,
+        },
+      });
+    } catch (err) {
+      if (err instanceof PromptPayConfigError) {
+        res.status(503).json({
+          error: {
+            code: 'PROMPTPAY_NOT_CONFIGURED',
+            message:
+              'ระบบ PromptPay ยังไม่พร้อมใช้งาน กรุณาลองอีกครั้งภายหลัง',
+          },
+        });
+        return;
+      }
+      res
+        .status(500)
+        .json({ error: { code: 'INTERNAL_ERROR', message: 'Internal error' } });
+    }
+  }
+);
+
+/**
+ * Cancel an in-progress (awaiting_slip) top-up the user owns. Only valid
+ * while no slip has been submitted yet. After slip upload (status=pending),
+ * cancellation requires admin support.
+ */
+router.post(
+  '/manual/:paymentId/cancel',
+  requireAuth,
+  (req: Request, res: Response) => {
+    const session = req.session;
+    if (!session) {
+      res
+        .status(401)
+        .json({ error: { code: 'UNAUTHORIZED', message: 'No session' } });
+      return;
+    }
+    const paymentId = Number(req.params.paymentId);
+    if (!Number.isInteger(paymentId) || paymentId <= 0) {
+      res
+        .status(400)
+        .json({ error: { code: 'BAD_REQUEST', message: 'Invalid payment id' } });
+      return;
+    }
+    const existing = manualPaymentsRepository.findById(paymentId);
+    if (existing === undefined || existing.user_id !== session.uid) {
+      res
+        .status(404)
+        .json({ error: { code: 'NOT_FOUND', message: 'Payment not found' } });
+      return;
+    }
+    if (existing.status !== 'awaiting_slip') {
+      res.status(409).json({
+        error: {
+          code: 'WRONG_STATUS',
+          message:
+            `ไม่สามารถยกเลิกได้: รายการนี้สถานะ '${existing.status}' ` +
+            `(หลังแนบสลิปแล้วต้องติดต่อ support)`,
+        },
+      });
+      return;
+    }
+    const ok = manualPaymentsRepository.deleteAwaitingSlipByIdAndUser(
+      paymentId,
+      session.uid
+    );
+    if (!ok) {
+      res.status(409).json({
+        error: { code: 'WRONG_STATUS', message: 'Cancel failed (race?)' },
+      });
+      return;
+    }
+    res.status(200).json({ ok: true, payment_id: paymentId });
+  }
+);
+
 router.get('/submissions', requireAuth, (req: Request, res: Response) => {
   const session = req.session;
   if (!session) {

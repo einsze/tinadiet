@@ -59,6 +59,8 @@ export type StartManualTopupResponse = {
   qr_data_url: string;
   promptpay_receiver_id: string;
   promptpay_receiver_name: string;
+  /** Only present on /current responses (resume flow). Optional for /start. */
+  created_at?: string;
 };
 
 export type PremiumBundleId = 1 | 3 | 6 | 12 | '7d';

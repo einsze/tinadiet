@@ -26,4 +26,14 @@ export const topupApi = {
     api.get<{ submissions: ManualPaymentSubmission[] }>(
       `/api/v1/topup/submissions?limit=${limit}`
     ),
+
+  currentManual: () =>
+    api.get<{ current: StartManualTopupResponse | null }>(
+      '/api/v1/topup/manual/current'
+    ),
+
+  cancelManual: (paymentId: number) =>
+    api.post<{ ok: true; payment_id: number }>(
+      `/api/v1/topup/manual/${paymentId}/cancel`
+    ),
 };

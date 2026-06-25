@@ -17,11 +17,13 @@ import type {
 } from '../types/wallet.js';
 
 type Step =
+  | { kind: 'loading' }
   | { kind: 'choose-amount' }
   | { kind: 'starting' }
-  | { kind: 'show-qr'; charge: StartManualTopupResponse }
+  | { kind: 'show-qr'; charge: StartManualTopupResponse; resumed: boolean }
   | { kind: 'upload-slip'; charge: StartManualTopupResponse; file: File | null }
   | { kind: 'uploading'; charge: StartManualTopupResponse }
+  | { kind: 'canceling'; charge: StartManualTopupResponse }
   | { kind: 'done'; charge: StartManualTopupResponse };
 
 const formatAmount = (thb: number): string =>
@@ -56,7 +58,7 @@ export const ManualTopupPage = () => {
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState<Step>({ kind: 'choose-amount' });
+  const [step, setStep] = useState<Step>({ kind: 'loading' });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadConfig = useCallback(async () => {
@@ -69,9 +71,27 @@ export const ManualTopupPage = () => {
     }
   }, []);
 
+  // On mount: check if user has an in-progress topup. If yes, resume to its
+  // QR step so they don't get confused by the "already has pending" error
+  // when trying to start a new one.
+  const checkExisting = useCallback(async () => {
+    try {
+      const { current } = await topupApi.currentManual();
+      if (current !== null) {
+        setStep({ kind: 'show-qr', charge: current, resumed: true });
+      } else {
+        setStep({ kind: 'choose-amount' });
+      }
+    } catch {
+      // Fall through to choose-amount if current check fails
+      setStep({ kind: 'choose-amount' });
+    }
+  }, []);
+
   useEffect(() => {
     void loadConfig();
-  }, [loadConfig]);
+    void checkExisting();
+  }, [loadConfig, checkExisting]);
 
   const resolvedAmount: number | null = (() => {
     if (selectedPreset !== null) return selectedPreset;
@@ -92,11 +112,44 @@ export const ManualTopupPage = () => {
     setStep({ kind: 'starting' });
     try {
       const res = await topupApi.startManual(resolvedAmount);
-      setStep({ kind: 'show-qr', charge: res });
+      setStep({ kind: 'show-qr', charge: res, resumed: false });
     } catch (err) {
       const apiErr = err as { message?: string; code?: string };
+      // Race: another tab/refresh created a pending topup. Resume into it.
+      if (
+        apiErr.code === 'ALREADY_HAS_AWAITING_SLIP' ||
+        apiErr.code === 'ALREADY_HAS_PENDING'
+      ) {
+        try {
+          const { current } = await topupApi.currentManual();
+          if (current !== null) {
+            setStep({ kind: 'show-qr', charge: current, resumed: true });
+            return;
+          }
+        } catch {
+          /* fall through */
+        }
+      }
       setError(apiErr.message ?? 'ไม่สามารถสร้าง QR ได้ ลองอีกครั้งนะคะ');
       setStep({ kind: 'choose-amount' });
+    }
+  };
+
+  const handleCancelExisting = async (paymentId: number) => {
+    setError(null);
+    const previousStep = step;
+    if (previousStep.kind === 'show-qr') {
+      setStep({ kind: 'canceling', charge: previousStep.charge });
+    }
+    try {
+      await topupApi.cancelManual(paymentId);
+      setStep({ kind: 'choose-amount' });
+      setSelectedPreset(null);
+      setCustomAmount('');
+    } catch (err) {
+      const apiErr = err as { message?: string };
+      setError(apiErr.message ?? 'ยกเลิกไม่สำเร็จ ลองอีกครั้งนะคะ');
+      setStep(previousStep);
     }
   };
 
@@ -130,6 +183,15 @@ export const ManualTopupPage = () => {
 
   // --- Render per step ---
 
+  if (step.kind === 'loading') {
+    return (
+      <div className="flex h-48 items-center justify-center gap-2 text-sm text-slate-500">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>กำลังตรวจสอบรายการของคุณ…</span>
+      </div>
+    );
+  }
+
   if (step.kind === 'done') {
     return (
       <div className="space-y-4">
@@ -157,23 +219,36 @@ export const ManualTopupPage = () => {
     );
   }
 
-  if (step.kind === 'show-qr' || step.kind === 'upload-slip' || step.kind === 'uploading') {
+  if (
+    step.kind === 'show-qr' ||
+    step.kind === 'upload-slip' ||
+    step.kind === 'uploading' ||
+    step.kind === 'canceling'
+  ) {
     const charge = step.charge;
+    const resumed = step.kind === 'show-qr' && step.resumed;
+    const canCancel =
+      step.kind === 'show-qr' || step.kind === 'upload-slip';
     return (
       <div className="space-y-4">
         <button
           type="button"
-          onClick={() => {
-            const ok = window.confirm(
-              'ยกเลิกการเติมเครดิตนี้? คุณสามารถเริ่มใหม่ได้ตลอด'
-            );
-            if (ok) goBackToPremium();
-          }}
+          onClick={goBackToPremium}
           className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-700"
         >
           <ArrowLeft className="h-3 w-3" />
-          ยกเลิก
+          กลับไปหน้า Premium
         </button>
+
+        {resumed && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+            <div className="font-semibold">มีรายการเติมเครดิตค้างอยู่</div>
+            <p className="mt-0.5">
+              คุณมีรายการเติมเครดิต {formatAmount(charge.amount_thb)} ฿
+              ที่ยังไม่เสร็จ ดำเนินการต่อ หรือกดยกเลิกเพื่อเปลี่ยนจำนวน
+            </p>
+          </div>
+        )}
 
         <section className="rounded-xl bg-white p-5 shadow-sm">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -218,6 +293,29 @@ export const ManualTopupPage = () => {
             <Upload className="h-4 w-4" />
             ฉันโอนแล้ว แนบสลิป
           </button>
+        )}
+
+        {canCancel && (
+          <button
+            type="button"
+            onClick={() => {
+              const ok = window.confirm(
+                `ยกเลิกรายการเติมเครดิต ${formatAmount(charge.amount_thb)} ฿?\nคุณสามารถสร้างรายการใหม่ด้วยจำนวนอื่นได้ทันที`
+              );
+              if (ok) void handleCancelExisting(charge.payment_id);
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-4 py-2 text-xs font-medium text-rose-700 transition hover:bg-rose-50"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            ยกเลิกและเปลี่ยนจำนวน
+          </button>
+        )}
+
+        {step.kind === 'canceling' && (
+          <div className="flex items-center justify-center gap-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            กำลังยกเลิก…
+          </div>
         )}
 
         {(step.kind === 'upload-slip' || step.kind === 'uploading') && (

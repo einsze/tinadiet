@@ -308,6 +308,36 @@ export const PremiumSection = () => {
         </button>
       </section>
 
+      {/* In-progress topup banner — shown when user has awaiting_slip
+          submission. Both "Continue" and "View" lead to /premium/topup/manual
+          which auto-resumes the pending transaction. */}
+      {(() => {
+        const awaiting = submissions.find(
+          (s) => s.status === 'awaiting_slip'
+        );
+        if (awaiting === undefined) return null;
+        return (
+          <section
+            onClick={() => navigate('/premium/topup/manual')}
+            className="cursor-pointer rounded-xl border border-amber-300 bg-amber-50 p-4 shadow-sm transition hover:bg-amber-100"
+          >
+            <div className="flex items-start gap-2">
+              <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-amber-900">
+                  มีการเติมเครดิตค้างอยู่
+                </div>
+                <p className="mt-0.5 text-xs text-amber-800">
+                  จำนวน {formatCredit(awaiting.requested_amount_satang)} ฿ ·
+                  ดำเนินการต่อ หรือยกเลิกเพื่อเปลี่ยนจำนวน
+                </p>
+              </div>
+              <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+            </div>
+          </section>
+        );
+      })()}
+
       {/* Premium redeem section */}
       <section className="rounded-xl bg-white p-5 shadow-sm">
         <div className="flex items-center gap-2">

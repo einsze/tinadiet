@@ -19,6 +19,8 @@ type Stmts = {
   insert: Statement;
   attachSlip: Statement;
   listByUserRecent: Statement;
+  findAwaitingSlipByUser: Statement;
+  deleteAwaitingSlipByIdAndUser: Statement;
   listPending: Statement;
   listHistory: Statement;
   countByUserAndStatus: Statement;
@@ -50,6 +52,16 @@ const stmts = (): Stmts => {
        WHERE user_id = ?
        ORDER BY created_at DESC
        LIMIT ?`
+    ),
+    findAwaitingSlipByUser: db.prepare(
+      `SELECT ${COLUMNS} FROM manual_payments
+       WHERE user_id = ? AND status = 'awaiting_slip'
+       ORDER BY created_at DESC
+       LIMIT 1`
+    ),
+    deleteAwaitingSlipByIdAndUser: db.prepare(
+      `DELETE FROM manual_payments
+       WHERE id = ? AND user_id = ? AND status = 'awaiting_slip'`
     ),
     listPending: db.prepare(
       `SELECT ${COLUMNS} FROM manual_payments
@@ -159,6 +171,17 @@ export const manualPaymentsRepository = {
   listByUserRecent: (userId: number, limit: number): ManualPayment[] => {
     const rows = stmts().listByUserRecent.all(userId, limit) as RawManualPayment[];
     return hydrateAll(rows);
+  },
+
+  findAwaitingSlipByUser: (userId: number): ManualPayment | undefined => {
+    return hydrate(
+      stmts().findAwaitingSlipByUser.get(userId) as RawManualPayment | undefined
+    );
+  },
+
+  deleteAwaitingSlipByIdAndUser: (id: number, userId: number): boolean => {
+    const info = stmts().deleteAwaitingSlipByIdAndUser.run(id, userId);
+    return info.changes > 0;
   },
 
   listPending: (limit: number, offset: number): ManualPayment[] => {
