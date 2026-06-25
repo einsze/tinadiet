@@ -319,8 +319,8 @@ export const ManualTopupPage = () => {
         <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           แพ็กเกจมาตรฐาน
         </div>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {(config?.presets_thb ?? [50, 100, 200, 500, 1000]).map((amt) => (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {(config?.presets_thb ?? [150, 450, 900, 1800]).map((amt) => (
             <PresetButton
               key={amt}
               amount={amt}
