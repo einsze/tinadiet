@@ -239,7 +239,7 @@ router.get('/config', requireAuth, (_req: Request, res: Response) => {
     500000
   );
   res.status(200).json({
-    presets_thb: [150, 450, 900, 1800],
+    presets_thb: [49, 150, 450, 900, 1800],
     min_thb: Math.ceil(minSatang / 100),
     max_thb: Math.floor(maxSatang / 100),
   });
