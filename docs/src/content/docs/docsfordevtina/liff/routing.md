@@ -16,12 +16,17 @@ structure: **public routes** that bypass LIFF auth (legal pages) and
 /privacy      │ Public (no LIFF auth)
 /terms        ┘
 
-/             ┐  Authenticated:
-/profile      │  1. Init LIFF SDK
-/premium      │  2. Exchange access token for session JWT
-/chat         │  3. Onboarding check (profile complete?)
-/settings     │  4. Render AppShell + route component
-/support      │
+/                       ┐  Authenticated:
+/profile                │  1. Init LIFF SDK
+/premium                │  2. Exchange access token for session JWT
+/premium/topup          │  3. Onboarding check (profile complete?)
+/premium/topup/manual   │  4. Render AppShell + route component
+/chat                   │
+/settings               │
+/support                │
+/history                │
+/gifts                  │
+/claim/:token           │  Gift claim (LIFF deep-link form recommended)
 /*  (NotFoundPage)
 ```
 
@@ -114,15 +119,22 @@ In `App.tsx`:
 ```tsx
 <BrowserRouter>
   <Routes>
+    <Route path="/privacy" element={<LegalPage document="privacy" />} />
+    <Route path="/terms"   element={<LegalPage document="terms" />} />
     <Route element={<AuthGate />}>
       <Route element={<ShellLayout />}>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/premium" element={<PremiumPage />} />
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/support" element={<SupportPage />} />
-        <Route path="*" element={<NotFoundPage />} />
+        <Route path="/"                       element={<DashboardPage />} />
+        <Route path="/profile"                element={<ProfilePage />} />
+        <Route path="/premium"                element={<PremiumPage />} />
+        <Route path="/premium/topup"          element={<TopupMethodPage />} />
+        <Route path="/premium/topup/manual"   element={<ManualTopupPage />} />
+        <Route path="/chat"                   element={<ChatPage />} />
+        <Route path="/settings"               element={<SettingsPage />} />
+        <Route path="/support"                element={<SupportPage />} />
+        <Route path="/history"                element={<HistoryPage />} />
+        <Route path="/gifts"                  element={<GiftsPage />} />
+        <Route path="/claim/:token"           element={<ClaimPage />} />
+        <Route path="*"                       element={<NotFoundPage />} />
       </Route>
     </Route>
   </Routes>

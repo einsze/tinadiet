@@ -187,13 +187,19 @@ uses satang. Stripe uses cents. Both APIs reject decimal amounts.
 must be computed as:
 
 ```
-new_expiry = max(now, current_expiry) + grant_days
+new_expiry = max(now, current_expiry) + grant_duration
 ```
 
-Implementation in `services/omise.ts` `computeGrantWindow()`.
+`grant_duration` is `bundle_months` for 1mo/3mo/6mo/12mo bundles, or
+`7 days` for the 7d bundle. Same rule applies to gift-claim grants.
 
-**Why**: User who pays again before expiry must not lose remaining days.
-If we always added from `now`, paying 5 days before expiry would result in
+Implementations:
+- `services/premium_redemption.ts` `computeNewExpiry()` — credit bundle redeem
+- `services/omise.ts` `computeGrantWindow()` — Omise direct charge (dormant)
+- `services/gifts.ts` claim handler — gift-funded grant
+
+**Why**: User who renews before expiry must not lose remaining days. If we
+always added from `now`, paying 5 days before expiry would result in
 30 days from now = 25 days lost. Stacking adds to the end of the current
 period.
 
@@ -232,6 +238,74 @@ cron.schedule('0 21 * * *', handler, { timezone: env.CRON_TZ });
 **Why**: Server may run in UTC (Railway default). Without explicit TZ, "21:00"
 means 21:00 UTC = 04:00 Thai next day → users get notifications at 4 AM.
 `Asia/Bangkok` is the only correct value for this project.
+
+## 13. Credit mutations ONLY via `applyCreditMutation`
+
+**Rule**: Every change to `users.credit_balance_satang` must go through
+`services/credit.ts::applyCreditMutation`. No direct `UPDATE users SET
+credit_balance_satang = ...` anywhere in the codebase.
+
+```ts
+// CORRECT
+applyCreditMutation({
+  userId,
+  amountSatang: -bundlePriceSatang,
+  sourceType: 'redeem_premium',
+  sourceRefId: redemptionId,
+  note: '...',
+});
+
+// WRONG — bypasses ledger
+db.prepare('UPDATE users SET credit_balance_satang = ? WHERE id = ?').run(...)
+```
+
+**Why**: `applyCreditMutation` does the mutation inside a SQLite
+transaction that atomically: (1) inserts a `credit_ledger` row with
+`balance_after_satang` snapshot, (2) updates the user balance. This gives
+us a single source of truth for reconciliation and prevents silent
+balance drift. No negative balances allowed. Memory:
+`feedback_credit_ledger_atomic_pattern`.
+
+## 14. Gifts grant entitlements, NOT credit
+
+**Rule**: When user A sends a gift to user B, A's credit is debited and
+B receives a service grant (premium days OR theme ownership). B does
+NOT receive credit. B cannot re-gift it, cash it out, or redeem it for
+something else.
+
+```ts
+// CORRECT — gift premium grant
+applyCreditMutation({ userId: sender.id, amountSatang: -cost, sourceType: 'gift_send', ... });
+userRepository.applyPremium(recipient.id, computeStackedExpiry(recipient, payload));
+
+// WRONG — would be e-money under Thai law
+applyCreditMutation({ userId: recipient.id, amountSatang: +cost, sourceType: 'gift_receive' });
+```
+
+**Why**: Compliance distinction. Direct credit transfer between users =
+peer-to-peer money transmission, which requires e-money licensing under
+Thai law. Service grants are equivalent to "buying a Spotify Premium gift
+subscription" — non-fungible entitlements, admin-revocable, no cash-out
+path. Stay on the safe side of the line.
+
+## 15. LIFF deep links for in-LINE URLs
+
+**Rule**: Any URL meant to open inside the LINE webview (Rich Menu cells,
+gift claim links, gate redirects) must use the LIFF deep-link form, not
+the plain `app.tinadiet.com` URL:
+
+```
+https://liff.line.me/<LIFF_ID>/<path>     ← LINE opens in LIFF webview with auth
+https://app.tinadiet.com/<path>           ← LINE opens in smart browser, NO auth
+```
+
+**Why**: When a user taps a plain `app.tinadiet.com` link from a LINE
+chat or Rich Menu, LINE opens it in its smart-browser context, where
+`liff.getIDToken()` returns `null` → "Failed to authenticate" on first
+page load. The LIFF deep-link form tells LINE to use the registered LIFF
+app for that ID, giving us auth context. Cloudflare Workers SPA fallback
+makes the subpath route work after LIFF resolves the deep link. Memory:
+`feedback_line_rich_menu_oa_manager`.
 
 ---
 

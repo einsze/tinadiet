@@ -38,6 +38,9 @@ CREATE TABLE credit_ledger (
                           'omise_topup',
                           'admin_grant',
                           'redeem_premium',
+                          'theme_purchase',
+                          'gift_send',
+                          'gift_refund',
                           'revoke_topup',
                           'revoke_redeem'
                         )),
@@ -57,7 +60,10 @@ CREATE INDEX idx_credit_ledger_source ON credit_ledger(source_type, source_ref_i
 | `manual_topup` | + | Operator approves slip | Primary cash inflow today |
 | `omise_topup` | + | Omise webhook (post-KYC) | Future inflow when Omise activated |
 | `admin_grant` | + or − | Superadmin via `/users/:id/adjust-credit` | Manual grant or deduct (rare) |
-| `redeem_premium` | − | User redeems premium bundle in LIFF | Spend for 1/3/6/12 month premium |
+| `redeem_premium` | − | User redeems premium bundle in LIFF | Spend for 7d/1/3/6/12 month premium |
+| `theme_purchase` | − | User buys a LIFF theme (Sprint 6 M5) | Spend for theme ownership |
+| `gift_send` | − | User creates a gift in LIFF (Sprint 6 M6) | Escrow at gift create time |
+| `gift_refund` | + | Gift transitions to cancel/expire/refuse/revoke | Auto-refund to sender |
 | `revoke_topup` | − | Superadmin revokes approved payment | Compensating entry |
 | `revoke_redeem` | − | Future: revoke premium grant | Not yet implemented |
 
@@ -66,6 +72,9 @@ CREATE INDEX idx_credit_ledger_source ON credit_ledger(source_type, source_ref_i
 - `omise_topup` → `payments.id` (future)
 - `admin_grant` → null (operator's adjust is direct)
 - `redeem_premium` → null (premium grant has no separate table — just user's `premium_expires_at`)
+- `theme_purchase` → `user_themes.id`
+- `gift_send` → `gifts.id`
+- `gift_refund` → `gifts.id`
 - `revoke_topup` → `manual_payments.id`
 
 ## The atomic mutation
@@ -124,6 +133,9 @@ Both wrap `applyCreditMutation` with sign-direction guards.
 | `services/manual_payment.ts::approveManualPayment` | + | `manual_topup` |
 | `services/manual_payment.ts::revokeApprovedManualPayment` | − | `revoke_topup` |
 | `services/premium_redemption.ts::redeemPremium` | − | `redeem_premium` |
+| `routes/api/themes.ts::POST /:slug/purchase` | − | `theme_purchase` |
+| `services/gifts.ts::createGift` | − | `gift_send` |
+| `services/gifts.ts::cancelGift / expirePendingGifts / handleRefused / revokeGift` | + | `gift_refund` |
 | `routes/api/admin/users.ts::POST /adjust-credit` | +/− | `admin_grant` |
 | (post-KYC) Omise webhook handler | + | `omise_topup` |
 

@@ -127,17 +127,53 @@ race-safe — concurrent INSERT would fail.
 
 ## Existing repositories
 
-- **`users.ts`** — Profile, plan, premium expiry, manual SQL `applyPremium` /
-  `revertToFree` / `listExpiredPremium` / `revertAllExpired`. Special method
-  `syncWeightChange` updates weight + recomputes goals atomically.
-- **`food_logs.ts`** — CRUD + aggregate queries (`weeklyAggregate`,
-  `countPhotoLogsToday`, `distinctLogDatesRecent`).
-- **`weight_logs.ts`** — Time series, `latest`, `listRecent`.
+User-data repos (CASCADE deleted with user):
+
+- **`users.ts`** — Profile, plan, premium expiry, credit balance, theme,
+  support mode. Includes `applyPremium` / `revertToFree` /
+  `listExpiredPremium` / `revertAllExpired`, `listExpiringOnLocalDate`
+  (renewal cron), `syncWeightChange` (weight + recompute goals
+  atomically), `setActiveTheme`, `setSupportMode` / `clearSupportMode`,
+  `updateCreditBalance` (used by `credit.ts` only — direct calls
+  forbidden), abuse + block setters.
+- **`food_logs.ts`** — CRUD + aggregate queries (`listByUserAndDate`,
+  `totalsByUserAndDate`, `weeklyAggregate`, `countPhotoLogsToday`,
+  `distinctLogDatesRecent`).
+- **`weight_logs.ts`** — Time series, `latest`, `listRecent`,
+  `findByUserAndDate` (used by history endpoint).
 - **`chat_messages.ts`** — Append + window queries
-  (`listRecentWindow(userId, minutes, limit)`, `countQuestionsToday`).
+  (`listRecentWindow(userId, minutes, limit)`, `countQuestionsToday`,
+  `listRecent` for LIFF chat panel).
+
+Payment + audit repos:
+
 - **`subscriptions.ts`** — Stripe upsert + lookup. Dormant.
 - **`payments.ts`** — Omise charges. `create`, `findByProviderChargeId`,
-  `updateStatus`, `markCompleted` (which writes grant window).
+  `updateStatus`, `markCompleted` (writes grant window). Dormant pending
+  KYC.
+- **`manual_payments.ts`** — Top-up lifecycle (Sprint 6 M4). Listing for
+  operator FIFO pending queue, status filter for history,
+  `setApproved` / `setRejected` / `setRevoked` setters.
+- **`credit_ledger.ts`** — Append-only ledger (Sprint 6 M4). Insert is
+  done ONLY via `services/credit.ts`. List by user (paginated), list by
+  source_ref_id.
+- **`user_flags.ts`** — Abuse audit log (Sprint 6 M4). One row per flag
+  event, `cleared_at` set on clear.
+- **`admin_users.ts`** — Admin login + CRUD (Sprint 6 M4). bcrypt-hashed
+  passwords, last_login_at audit.
+- **`system_settings.ts`** — Key-value table with `getAll` /
+  `getByKeys` / `set(key, value, adminUserId)` (audit-trailed).
+
+Marketplace repos:
+
+- **`user_themes.ts`** — Per-user theme ownership (Sprint 6 M5).
+  `purchase` records the price snapshot at purchase time;
+  `listByUser` for LIFF "owned themes", `existsForUser` for gift
+  refused-reason check.
+- **`gifts.ts`** — Gift lifecycle (Sprint 6 M6). Status transitions via
+  named setters (`markClaimed` / `markCanceled` / `markExpired` / etc.),
+  `findByClaimToken` for public claim preview, `listPendingExpired` for
+  daily cron.
 
 ## Adding a new repository
 

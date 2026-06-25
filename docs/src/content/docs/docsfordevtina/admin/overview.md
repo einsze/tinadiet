@@ -17,7 +17,7 @@ looking at.
 ## Stack
 
 Same as LIFF for consistency:
-- Vite 5 + React 18 + TypeScript ESM
+- Vite 6 + React 18 + TypeScript ESM (Vite bumped 5→6 in Dependabot Phase 2)
 - Tailwind 3 (blue brand palette `#3b82f6` family)
 - `react-router-dom` v6
 - `lucide-react` icons
@@ -83,7 +83,9 @@ claim is re-checked against the DB on every request.
 | `/payments/:id` | both | Detail with slip viewer + approve/reject/revoke actions |
 | `/users` | both | Search + flag filter |
 | `/users/:id` | both | User detail + credit + warnings + ledger + flag history |
-| `/settings` | superadmin | PromptPay + pricing + threshold + topup limits |
+| `/gifts` | both | Gift list with status filter (Sprint 6 M6) |
+| `/gifts/:id` | both | Gift detail. Superadmin sees Revoke button |
+| `/settings` | superadmin | PromptPay + bundle pricing + original-price promo + theme prices + threshold + topup limits |
 | `/operators` | superadmin | CRUD admin accounts |
 | `/account` | both | Change own password |
 
@@ -108,9 +110,17 @@ the project owner can log in immediately after deploy. Initial
 credentials are kept in a private secrets file outside the repo
 (maintained by the project owner).
 
-**Mandatory step**: rotate the seeded password via `/account` page
-after first login, then replace with a high-entropy password (12+
-chars, mixed case + symbols).
+Owner has chosen to skip mandatory rotation — superadmins rotate
+periodically on their own schedule via `/account`. Acceptable given:
+- The admin dashboard `workers.dev` URL is disabled (only the custom
+  domain `admin.tinadiet.com` resolves)
+- Docs that mention `admin.tinadiet.com` are behind the obscure
+  `/docsfordevtina/` path with `noindex` meta + `robots.txt` disallow
+- Bcrypt cost 10 makes brute force at this scale impractical
+
+If you're onboarding new superadmins, generate a high-entropy password
+(12+ chars, mixed case + symbols) for them and have them rotate at
+first login.
 
 ## Creating additional operators
 
@@ -149,7 +159,6 @@ Already in place:
 Recommended (open):
 - 🟡 Set a SEPARATE `ADMIN_JWT_SECRET` env var (currently can fall back
   to `SESSION_JWT_SECRET`)
-- 🟡 Rotate seeded superadmin passwords post-deploy
 - 🔵 Restrict admin domain via Cloudflare Access (email allowlist or IP)
 - 🔵 Add TOTP 2FA for admin login (would need new `admin_user_totp_secret`
   column + verify step)

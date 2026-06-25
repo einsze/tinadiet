@@ -18,9 +18,12 @@ Node 22, all dependencies pinned to caret ranges.
 | DB driver | better-sqlite3 | `^12.10.0` — sync, native binding |
 | Validation | Zod 4 | `^4.4.3` |
 | Session | jsonwebtoken | `^9.0.3` — HS256 |
+| Admin password hash | bcryptjs | `^3.0.2` — pure JS (Windows path-with-spaces safe) |
 | LINE | `@line/bot-sdk` v9 | `^9.6.0` |
 | OpenAI | `openai` SDK v6 | `^6.42.0` |
 | Stripe (dormant) | `stripe` v22 | `^22.2.0` |
+| PromptPay QR | `promptpay-qr` + `qrcode` | EMVCo payload + PNG render |
+| Slip uploads | `multer` | `^2.0.x` — memoryStorage → disk |
 | Cron | `node-cron` | `^4.2.1` |
 | Dev runner | `tsx` | `^4.19.1` |
 
@@ -51,29 +54,46 @@ backend/src/
 │   ├── index.ts    Schedules
 │   ├── daily_summary.ts
 │   ├── weekly_summary.ts
-│   └── expire_premium.ts
+│   ├── expire_premium.ts
+│   ├── renewal_reminders.ts
+│   └── expire_gifts.ts
 ├── line/
 │   └── client.ts   LINE SDK wrapper (reply, push, fetch message content)
 ├── middleware/
-│   └── auth.ts     requireAuth — verify session JWT
+│   ├── auth.ts     requireAuth — verify session JWT
+│   └── admin_auth.ts  requireAdmin / requireSuperadmin
 ├── repositories/   DB access (lazy stmts):
 │   ├── users.ts
 │   ├── food_logs.ts
 │   ├── weight_logs.ts
 │   ├── chat_messages.ts
-│   ├── subscriptions.ts (Stripe)
-│   └── payments.ts      (Omise)
+│   ├── subscriptions.ts (Stripe, dormant)
+│   ├── payments.ts      (Omise, dormant)
+│   ├── admin_users.ts
+│   ├── manual_payments.ts
+│   ├── credit_ledger.ts
+│   ├── system_settings.ts
+│   ├── user_flags.ts
+│   ├── user_themes.ts
+│   └── gifts.ts
 ├── routes/
-│   ├── api/        LIFF-facing /api/v1/*
+│   ├── api/        LIFF-facing /api/v1/* + admin/* sub-tree
 │   ├── webhook/    line.ts, stripe.ts, omise.ts
 │   └── internal/   jobs.ts (cron triggers, secret-gated)
 ├── services/       Coordination + external API:
-│   ├── food_parser.ts  (OpenAI text + vision)
-│   ├── coach.ts        (OpenAI meal suggestions)
-│   ├── consultation.ts (OpenAI Q&A)
-│   ├── stripe.ts       (dormant)
-│   └── omise.ts        (PromptPay + TrueMoney)
-├── use-cases/      Higher-level orchestrations (sparse, evolving)
+│   ├── food_parser.ts        (OpenAI text + vision)
+│   ├── coach.ts              (OpenAI meal suggestions)
+│   ├── consultation.ts       (OpenAI Q&A)
+│   ├── credit.ts             (atomic credit ledger mutation)
+│   ├── manual_payment.ts     (top-up lifecycle)
+│   ├── premium_redemption.ts (credit → premium days)
+│   ├── gifts.ts              (peer-to-peer gift system)
+│   ├── promptpay_qr.ts       (server-render PromptPay EMVCo QR)
+│   ├── slip_storage.ts       (multer-based slip uploads)
+│   ├── abuse_flag.ts         (tiered abuse-warning logic)
+│   ├── admin_auth.ts         (bcrypt + admin JWT)
+│   ├── stripe.ts             (dormant)
+│   └── omise.ts              (dormant)
 ├── utils/          Generic helpers
 └── index.ts        App entry — mount routes, start cron, listen
 ```

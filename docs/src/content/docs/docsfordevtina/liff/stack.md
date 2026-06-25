@@ -12,13 +12,13 @@ assets by a Cloudflare Worker.
 
 | Layer | Choice | Pinned |
 |---|---|---|
-| Bundler | Vite 5 | `^5.4.x` |
+| Bundler | Vite 6 | `^6.4.x` (bumped from 5 in Dependabot Phase 2, 2026-06-26) |
 | Framework | React 18 | `^18.3.x` |
 | Routing | react-router-dom 6 | `^6.30.x` |
-| Styling | Tailwind CSS 3 | `^3.4.x` |
+| Styling | Tailwind CSS 3 (CSS-var theming) | `^3.4.x` |
 | LINE SDK | `@line/liff` v2 | `^2.x` |
-| Icons | `lucide-react` | `^0.x` |
-| Markdown | `marked` (for legal docs) | `^x` |
+| Icons | `lucide-react` | `^1.x` |
+| Markdown | `marked` (for legal docs) | `^18.x` |
 | Deploy | Wrangler 4 | `^4.x` |
 | Hosting | Cloudflare Workers Static Assets | — |
 | Language | TypeScript strict | `~5.x` |
@@ -29,7 +29,7 @@ assets by a Cloudflare Worker.
 liff/src/
 ├── App.tsx                 Top-level router + AuthGate
 ├── main.tsx                React entry
-├── index.css               Tailwind + custom keyframes
+├── index.css               Tailwind + custom keyframes + CSS-var theme tokens
 ├── api/                    typed HTTP client per resource
 │   ├── auth.ts
 │   ├── users.ts
@@ -37,40 +37,59 @@ liff/src/
 │   ├── weightLogs.ts
 │   ├── chat.ts
 │   ├── billing.ts
-│   └── account.ts
+│   ├── account.ts
+│   ├── wallet.ts
+│   ├── topup.ts
+│   ├── premium.ts
+│   ├── themes.ts
+│   ├── gifts.ts
+│   └── history.ts
 ├── assets/                 inline imports (mascot, etc.)
 ├── components/
-│   ├── AppShell.tsx        header + main + bottom nav
+│   ├── AppShell.tsx        header + main + bottom nav (SUBPAGE_META keys)
 │   ├── AuthLoadingScreen.tsx
 │   ├── OnboardingSplash.tsx
 │   ├── ProfileForm.tsx
-│   ├── Dashboard sections (PremiumSection, ChatSection, etc.)
+│   ├── PremiumSection.tsx  bundle redeem + wallet card + gift button
+│   ├── ChatSection.tsx
+│   ├── SettingsSection.tsx
+│   ├── WeightSection.tsx
+│   ├── ThemeShop.tsx       marketplace card (S6 M5)
+│   ├── GiftCreateModal.tsx (S6 M6)
+│   ├── PaymentMethodPicker.tsx     (Omise dormant)
+│   ├── PromptPayQrModal.tsx        (Omise dormant)
+│   ├── ManualLogForm.tsx
 │   ├── KcalRing.tsx
 │   ├── WeightChart.tsx
 │   └── LegalPage.tsx
-├── hooks/
-├── i18n/
+├── themes/                 CSS-var palette swap engine (S6 M5)
+│   └── palettes.ts         theme slug → palette + pattern SVG
 ├── lib/
-│   ├── api.ts              fetch wrapper + session token
+│   ├── api.ts              fetch wrapper + session token (incl. postMultipart)
 │   ├── env.ts              VITE_* env vars
 │   └── premium.ts          isPremium mirror
 ├── pages/                  route components
 │   ├── DashboardPage.tsx
 │   ├── ProfilePage.tsx
 │   ├── PremiumPage.tsx
+│   ├── TopupMethodPage.tsx
+│   ├── ManualTopupPage.tsx
 │   ├── ChatPage.tsx
 │   ├── SettingsPage.tsx
 │   ├── SupportPage.tsx
+│   ├── HistoryPage.tsx     (2026-06-25)
+│   ├── GiftsPage.tsx       (S6 M6)
+│   ├── ClaimPage.tsx       (S6 M6)
 │   └── NotFoundPage.tsx
 ├── state/
-│   └── session.ts          User + streak + premium
-├── styles/                 (rarely used; Tailwind is primary)
+│   └── session.ts          User + streak + premium + setUser
 └── types/                  shared types mirroring backend
     ├── user.ts
     ├── foodLog.ts
     ├── weightLog.ts
     ├── chatMessage.ts
-    └── billing.ts
+    ├── billing.ts
+    └── wallet.ts           credit + bundle types (S6 M4)
 ```
 
 ## Deploy pipeline

@@ -71,7 +71,7 @@ git history but have separate `package.json` and dependency trees.
 | Payments | Manual PromptPay top-up → credit ledger | Bundles 7d/1mo/3mo/6mo/12mo. Omise dormant (Coming Soon), Stripe dormant. **Launch-validated 2026-06-25.** |
 | QR generation | `promptpay-qr` + `qrcode` npm libs | Server-renders PromptPay QR with amount baked in |
 | Admin auth | `bcryptjs` + JWT (8h, separate audience) | Independent from user LIFF JWT |
-| Frontend | Vite 5 + React 18 + Tailwind 3 | `@line/liff` v2 (LIFF only) |
+| Frontend | Vite 6 + React 18 + Tailwind 3 | `@line/liff` v2 (LIFF only); Vite bumped 5→6 in Dependabot Phase 2 (2026-06-26) |
 | Routing | `react-router-dom` v6 | Multi-page LIFF + Admin |
 | Icons | `lucide-react` | Match Rich Menu style |
 | Cron | `node-cron` | Daily summary, weekly summary, expire premium |

@@ -90,9 +90,11 @@ for payment (currently dormant), and LINE for messaging + auth.
   7. `/internal/jobs/*` — cron triggers (x-jobs-secret guarded)
   8. `/healthz` — public health check
 - Cron jobs (node-cron, Asia/Bangkok timezone):
-  - `0 21 * * *` daily summary
-  - `0 8 * * 1` weekly summary (Monday morning)
-  - `0 2 * * *` expire premium
+  - `0 21 * * *` daily summary (21:00 ICT)
+  - `0 8 * * 1` weekly summary (Monday 08:00 ICT)
+  - `0 2 * * *` expire premium (02:00 ICT)
+  - `0 10 * * *` renewal reminders (10:00 ICT — 3d/1d/day-of expiry buckets)
+  - `0 3 * * *` expire gifts (03:00 ICT — pending past 7-day claim window)
 
 ### SQLite database
 - File at `/data/app.db` on Railway volume (`backend-volume`, 1 GB)
@@ -206,8 +208,9 @@ the topup method picker is the user-facing reminder.
 | HTTP routes | `backend/src/routes/{api,webhook,internal}/` |
 | Domain logic | `backend/src/domain/` |
 | AI services | `backend/src/services/{food_parser,coach,consultation}.ts` |
-| Payment service | `backend/src/services/{omise,stripe}.ts` |
-| Background jobs | `backend/src/jobs/` |
+| Payment services | `backend/src/services/{credit,manual_payment,premium_redemption,promptpay_qr,slip_storage,abuse_flag,omise,stripe}.ts` |
+| Gift + theme services | `backend/src/services/gifts.ts` (themes hardcoded in LIFF) |
+| Background jobs | `backend/src/jobs/` (daily_summary, weekly_summary, expire_premium, renewal_reminders, expire_gifts) |
 | LIFF pages | `liff/src/pages/` |
 | LIFF components | `liff/src/components/` |
 | LIFF API client | `liff/src/api/` |

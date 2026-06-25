@@ -52,22 +52,73 @@ app.use((_req, res) => res.status(404).json({ error: { code: 'NOT_FOUND' } }));
 ## `/api/v1/*` LIFF-facing routes
 
 All require `Authorization: Bearer <session_jwt>` (via `requireAuth`
-middleware) except `/auth/exchange`.
+middleware) except `/auth/exchange` and `/gifts/claim/:token` (GET, public
+preview).
 
 | Endpoint | Method | Purpose |
 |---|---|---|
 | `/auth/exchange` | POST | Exchange LIFF access token for backend session JWT |
 | `/users/me` | GET, PATCH | Get / update user profile (computes goals on PATCH) |
-| `/food-logs` | GET, POST, PATCH/:id, DELETE/:id | Food log CRUD |
+| `/food-logs` | GET, POST, PATCH/:id, DELETE/:id | Food log CRUD (today only) |
 | `/weight-logs` | GET, POST | Weight tracking |
+| `/history` | GET | Per-date summary with 30d free / 365d premium gating (`?date=YYYY-MM-DD`) |
 | `/chat/messages` | GET, POST | Consultation Q&A (premium-gated) |
 | `/billing/status` | GET | Plan + payment provider config + latest payment |
 | `/billing/checkout` | POST | Stripe checkout session (returns 503 when dormant) |
 | `/billing/cancel` | POST | Stripe cancel-at-period-end (returns 404 if no subscription) |
-| `/billing/omise/charge` | POST | Create Omise charge (PromptPay or TrueMoney) |
+| `/billing/omise/charge` | POST | Create Omise charge (returns 503 when dormant) |
 | `/billing/omise/charge/:id` | GET | Polling endpoint (auto-syncs with Omise if pending) |
+| `/wallet` | GET | Credit balance + recent ledger entries |
+| `/wallet/history` | GET | Paginated ledger history |
+| `/topup/manual/start` | POST | Begin manual PromptPay top-up (returns QR data URL) |
+| `/topup/manual/:id/upload-slip` | POST | Multipart upload of payment slip image |
+| `/topup/manual/:id/cancel` | POST | Owner self-cancel awaiting_slip top-up |
+| `/topup/manual/current` | GET | Resume an in-progress awaiting_slip top-up |
+| `/topup/submissions` | GET | User's own top-up submission list |
+| `/topup/config` | GET | min / max / presets (driven by system_settings) |
+| `/premium/bundles` | GET | Catalog: 7d / 1mo / 3mo / 6mo / 12mo with prices + originals |
+| `/premium/redeem` | POST | Spend credit to grant premium days (stacking) |
+| `/themes` | GET | Catalog + owned + active theme |
+| `/themes/:slug/purchase` | POST | Buy theme with credit |
+| `/themes/:slug/activate` | POST | Switch active theme (must be owned) |
+| `/gifts` | POST | Create gift (premium bundle or theme) → returns claim_token |
+| `/gifts/sent` | GET | List gifts user has sent (any status) |
+| `/gifts/received` | GET | List gifts user has received |
+| `/gifts/claim/:token` | GET | **Public preview** (no auth) — gift type, sender, message |
+| `/gifts/claim/:token` | POST | Authenticated claim (apply entitlement to caller) |
+| `/gifts/:id/cancel` | POST | Sender-only self-cancel a pending gift |
 | `/account/export` | POST | PDPA data export — returns full JSON bundle |
 | `/account/delete` | POST | PDPA account deletion (requires `confirm: 'DELETE'`) |
+
+### `/api/v1/admin/*` operator + superadmin routes
+
+Mounted under `/api/v1/admin/`, gated by `requireAdmin` (any admin) or
+`requireSuperadmin` (superadmin only) middleware. JWT audience must be
+`admin` (separate from user JWT).
+
+| Endpoint | Method | Role | Purpose |
+|---|---|---|---|
+| `/auth/login` | POST | public | Email + password → admin JWT |
+| `/auth/me` | GET | admin | Current admin info |
+| `/auth/change-password` | POST | admin | Self-rotate password |
+| `/payments/pending` | GET | admin | FIFO oldest-first list of awaiting-review top-ups |
+| `/payments/history` | GET | admin | Status-filtered list with pagination |
+| `/payments/:id` | GET | admin | Full submission detail |
+| `/payments/:id/slip` | GET | admin | Authenticated blob fetch of slip image |
+| `/payments/:id/approve` | POST | admin | Approve + grant credit (escalates if high-value) |
+| `/payments/:id/reject` | POST | admin | Reject with reason (may flag user) |
+| `/payments/:id/revoke` | POST | superadmin | Compensating ledger entry |
+| `/users` | GET | admin | Search + flag filter |
+| `/users/:id` | GET | admin | Detail + ledger view |
+| `/users/:id/adjust-credit` | POST | superadmin | Manual credit grant (positive or negative) |
+| `/users/:id/clear-warnings` | POST | superadmin | Reset abuse_warning_count |
+| `/users/:id/block` | POST | superadmin | Manual block |
+| `/users/:id/unblock` | POST | superadmin | Manual unblock |
+| `/settings` | GET, PUT | admin (GET) / superadmin (PUT) | Manage `system_settings` |
+| `/operators` | GET, POST, PATCH/:id, DELETE/:id | superadmin | Operator CRUD |
+| `/gifts` | GET | admin | List gifts (status filter) |
+| `/gifts/:id` | GET | admin | Gift detail |
+| `/gifts/:id/revoke` | POST | superadmin | Revoke (refund sender + unwind recipient) |
 
 ## `/webhook/line`
 
@@ -75,7 +126,18 @@ middleware) except `/auth/exchange`.
 
 1. Verify `X-Line-Signature` header against request body using
    `LINE_CHANNEL_SECRET`
-2. Parse events → dispatch by intent:
+2. Upsert user from `lineUserId`
+3. Pre-classification gates (these run BEFORE intent classification —
+   they short-circuit when active):
+   - **Support mode active** (`isInSupportMode(user)`): any message
+     replies with generic ACK; exit keywords (`exit`/`ออก`/`ยกเลิก`/...)
+     clear mode. No AI calls, no DB writes beyond the user record.
+   - **Support trigger** (text matches `^support$` case-insensitive):
+     `setSupportMode(user, now+30min)` + reply auto-message asking for
+     description. Team Tina handles via OA Manager Chats tab.
+4. Profile gate (`isProfileComplete(user)`): if false, reply
+   `profileGateText` (asks user to open Dashboard via Rich Menu).
+5. Parse events → dispatch by intent:
    - `intent.classify(event)` returns one of: `weight_log`, `show_logs`,
      `consult_question`, `greeting`, `attempt_parse`, `image`
    - Greeting → static reply
@@ -84,7 +146,7 @@ middleware) except `/auth/exchange`.
    - consult_question → `runConsultation()` (premium-gated)
    - attempt_parse → `parseTextToFoodLog()` → save → reply
    - image → `parseImageToFoodLog()` → save → reply (premium-gated)
-3. Reply via LINE Reply API using `replyToken`
+6. Reply via LINE Reply API using `replyToken`
 
 ## `/webhooks/stripe` (dormant)
 
@@ -114,6 +176,8 @@ Manual triggers for cron jobs. Guarded by `x-jobs-secret` header matching
 | `/internal/jobs/daily-summary` | POST | Trigger daily summary (supports `?dry_run=true`) |
 | `/internal/jobs/weekly-summary` | POST | Trigger weekly summary |
 | `/internal/jobs/expire-premium` | POST | Trigger expire premium sweep |
+| `/internal/jobs/renewal-reminders` | POST | Trigger renewal reminder push (3d/1d/day-of buckets) |
+| `/internal/jobs/expire-gifts` | POST | Trigger expire pending gifts past 7-day claim window |
 
 Useful for testing without waiting for the cron schedule.
 
@@ -141,10 +205,16 @@ Only `/api/v1/*` has CORS enabled. Allowlist:
 
 ```ts
 'https://app.tinadiet.com',                     // production LIFF
+'https://admin.tinadiet.com',                    // production admin dashboard
 'https://liff.line.me',                          // LINE's LIFF host
-'http://localhost:5173',                         // dev Vite
+'http://localhost:5173',                         // dev LIFF Vite
+'http://localhost:5174',                         // dev admin Vite
 /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/,    // dev tunnel
 ```
+
+Allowed methods: `GET, POST, PUT, PATCH, DELETE, OPTIONS`. The PUT entry
+is critical for admin Settings + operator update endpoints; omitting it
+causes silent "Failed to fetch" errors due to preflight rejection.
 
 Webhook endpoints don't need CORS (called by external services
 directly, not browser-initiated).

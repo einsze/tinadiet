@@ -8,9 +8,33 @@ sidebar:
 The LIFF is rose-pink branded ("Tina Diet"), Thai-first content, English
 chrome. Mobile-first with safe-area handling for iPhone X+.
 
-## Brand palette
+## Brand palette + theme system
 
-Rose-pink, defined in `liff/tailwind.config.js` `theme.extend.colors.brand`:
+Default theme: rose-pink. Sprint 6 M5 introduced a theme marketplace with
+6 themes total (default + sakura / ocean / forest / sunset / midnight).
+Each theme is a palette + a background pattern SVG.
+
+The Tailwind `theme.extend.colors.brand` shades are defined via **CSS
+custom properties** so palette swap requires no rebuild:
+
+```js
+// liff/tailwind.config.js
+colors: {
+  brand: {
+    50:  'rgb(var(--brand-50) / <alpha-value>)',
+    100: 'rgb(var(--brand-100) / <alpha-value>)',
+    // ... through 900
+  },
+},
+```
+
+At runtime, `themes/palettes.ts` applies the active palette by setting
+`document.documentElement.style.setProperty('--brand-500', '236 69 113')`
+etc. The `[data-theme="<slug>"]` selector on `<html>` drives the
+`.theme-pattern` fixed overlay (SVG data-URI tiles per theme — petals,
+waves, leaves, sunset-gradient, stars).
+
+Default rose-pink palette:
 
 | Shade | Hex | Use |
 |---|---|---|
@@ -27,8 +51,10 @@ Rose-pink, defined in `liff/tailwind.config.js` `theme.extend.colors.brand`:
 
 History: original sky-blue palette (`brand-500 = #0ea5e9`) was flipped to
 rose-pink in Sprint 5 M3 to better match the female-coach brand identity.
-All existing `text-brand-700`, `bg-brand-500`, etc. references automatically
-render in the new color — palette flip was zero-friction.
+All `text-brand-700`, `bg-brand-500`, etc. references automatically render
+in the active palette — palette flip was zero-friction. The CSS-var
+indirection was added in Sprint 6 M5 so users (not just devs) can swap
+palettes from the theme store.
 
 ## Typography
 
@@ -79,20 +105,29 @@ Page metadata defined in `SUBPAGE_META` record keyed by route path.
 Composable sections that render on `DashboardPage`:
 - `KcalRing` — SVG ring showing today's kcal vs goal
 - `WeightSection` — wraps `WeightChart` (SVG line chart) with latest/target
-- `ChatSection` — consultation Q&A panel (premium-gated, locked UI when
-  free)
-- `PremiumSection` — dual state (free vs premium), method picker for
-  payment, projected expiry preview
+- `PremiumSection` — wallet balance card + bundle redeem buttons + theme
+  shop entry; uses `useSession().status.user.credit_balance_satang` for
+  reactive balance updates across siblings
 
-### PromptPayQrModal
+### ThemeShop (Sprint 6 M5)
 
-Full-screen modal for PromptPay payment. States:
-- `pending` — QR image + countdown + polling
-- `successful` — green checkmark + auto-close
-- `expired` — amber warning + close button
-- `failed` — rose warning + close button
+Grid of 6 theme cards with palette swatches + lock state (Owned /
+Activate / Purchase). Buying triggers `POST /api/v1/themes/:slug/purchase`
+which deducts credit + records ownership. Activating swaps the active
+palette CSS vars instantly without reload.
 
-ESC key closes the modal. Polling every 2s with cleanup on unmount.
+### GiftCreateModal (Sprint 6 M6)
+
+Bottom-sheet flow (compose → creating → created with share/copy buttons).
+Used by both bundle gifts (from PremiumSection) and theme gifts (from
+ThemeShop). Sends Web Share API → `liff.shareTargetPicker` → clipboard
+fallback for the resulting LIFF deep-link claim URL.
+
+### PromptPayQrModal + PaymentMethodPicker (Omise — dormant)
+
+Preserved but unused while Omise is dormant. Will reactivate when KYC
+done. Manual top-up replaced this flow via `TopupMethodPage` +
+`ManualTopupPage`.
 
 ### ProfileForm
 

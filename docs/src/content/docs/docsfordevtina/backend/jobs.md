@@ -15,9 +15,8 @@ scheduled in `Asia/Bangkok` timezone.
 | Daily summary | 21:00 ICT | `0 21 * * *` | `DAILY_SUMMARY_CRON` |
 | Weekly summary | Monday 08:00 ICT | `0 8 * * 1` | `WEEKLY_SUMMARY_CRON` |
 | Expire premium | 02:00 ICT | `0 2 * * *` | `EXPIRE_PREMIUM_CRON` |
-| Renewal reminders (PLANNED) | 10:00 ICT | `0 10 * * *` | `RENEWAL_REMINDERS_CRON` |
-
-The "renewal reminders" job is Sprint 6 M3 work, not yet shipped.
+| Renewal reminders | 10:00 ICT | `0 10 * * *` | `RENEWAL_REMINDER_CRON` |
+| Expire gifts | 03:00 ICT | `0 3 * * *` | `EXPIRE_GIFTS_CRON` |
 
 ## Anatomy of a job
 
@@ -159,11 +158,26 @@ curl -X POST \
 - Single batch UPDATE (no per-user push, transparent expiry)
 - Caller can `dry_run=true` to preview
 
-### `renewal_reminders.ts` (PLANNED — Sprint 6 M3)
+### `renewal_reminders.ts`
 
-Will push LINE notifications to users with premium expiring in 3 days, 1
-day, or today. Message: "Premium ของคุณจะหมดอายุใน X วัน — แตะปุ่ม
-Premium เพื่อต่ออายุค่ะ".
+- Three buckets per run: users whose `premium_expires_at` matches today,
+  today + 1 day, or today + 3 days (TZ-aware via SQL `date(...)`)
+- Filter: `plan='premium' AND is_blocked=0`
+- Message: "Premium ของคุณจะหมดอายุในอีก X วันค่ะ อย่าลืมเตรียม credit ให้
+  พอเพื่อใช้งาน premium ต่อนะคะ 💖"
+- No idempotency tracking — runs once daily, manual triggers should use
+  `?dry_run=true` to preview. Acceptable trade-off vs adding a
+  sent-tracking table.
+
+### `expire_gifts.ts`
+
+- Selects `gifts` where `status='pending' AND claim_expires_at <= now`
+- For each: marks `status='expired'`, refunds sender via
+  `applyCreditMutation({ sourceType: 'gift_refund', ... })`, pushes
+  notification to sender via `notifyGiftExpired`
+- All within a per-gift try/catch so one failure doesn't abort the batch
+- Default schedule 03:00 ICT picks pending gifts created exactly 7 days
+  ago (`GIFT_CLAIM_WINDOW_DAYS=7` default)
 
 ## Why not external cron (e.g. cloud scheduler)?
 

@@ -7,7 +7,12 @@ sidebar:
 
 Tina Diet's monetization is **credit-based**. Users top up credit
 via manual PromptPay transfer (operator-reviewed), then **redeem**
-credit for premium bundles (1, 3, 6, or 12 months).
+credit for premium bundles (7 days, 1, 3, 6, or 12 months).
+
+End-to-end **validated in production 2026-06-25**: real Thai banking app
+PromptPay scan → slip upload → operator approval → credit grant →
+bundle redeem. The system is launch-ready and accepting real paying
+users.
 
 This is a deliberate pivot from the original direct-charge Omise model
 because Omise business verification takes ~1 month and we needed a
@@ -21,11 +26,12 @@ USER
 ─────
 1. Open LIFF → /premium → tap "Top up credit"
 2. Choose method: Manual PromptPay (active) / Omise (Coming Soon)
-3. Pick amount: 50 / 100 / 200 / 500 / 1000 THB or custom
+3. Pick amount: 49 / 150 / 450 / 900 / 1800 THB (aligned to bundle prices)
+   or custom (min 49 THB, max 5000 THB by default)
 4. Backend generates PromptPay QR with amount baked in (server-side)
 5. Scan QR in any Thai bank app, transfer
 6. Upload slip back to LIFF
-7. See status "Menunggu konfirmasi (1–24 jam)"
+7. See status "รอตรวจสอบ (1–24 ชั่วโมง)"
 
 OPERATOR
 ─────────
@@ -68,6 +74,7 @@ spend (premium, future themes, etc.) draws *from* it.
 
 | Bundle | Credit |
 |---|---|
+| 7 days   | 49 |
 | 1 month  | 150 |
 | 3 months | 450 |
 | 6 months | 900 |
@@ -75,6 +82,20 @@ spend (premium, future themes, etc.) draws *from* it.
 
 Flat pricing (no bulk discount) by default — admin can change to add a
 discount curve any time without code change.
+
+The 7-day bundle (49 credit ≈ 49 THB) acts as a low-friction trial tier;
+its price equals roughly one daily coffee in Thailand. The webhook
+premium gates (when free users hit a Premium-only feature in LINE chat)
+explicitly pitch this 49฿/7-day option with the "average 7฿/day" hook.
+
+For the 49 THB minimum to actually be accepted by the backend, the admin
+`topup_min_satang` setting must be lowered from its default `5000`
+(50 THB) to `4900` (49 THB). This is configured in production.
+
+**Original-price promo display:** admin can set `original_price_X_credit`
+higher than the current `price_X_credit` and the LIFF marketplace will
+render a strikethrough on the original + a `−X% OFF` ribbon. Set 0 to
+hide. Affects display only — actual charge stays at `price_X_credit`.
 
 ## Provider status
 
@@ -171,13 +192,26 @@ When Omise auto-payment is reactivated post-KYC, fees will be:
 
 The manual model retains 100% but requires operator time. Trade-off.
 
+## Shipped extensions to the credit model
+
+- **7-day bundle** (49 credit) added in Sprint 6 M6 — the entry tier
+  promoted by webhook premium gates.
+- **Themes marketplace** (Sprint 6 M5): 6 LIFF themes priced in credit
+  (default free, others 50–80 credit). Same `applyCreditMutation` flow,
+  source_type `theme_purchase`. See [data model](/docsfordevtina/architecture/data-model/#user_themes-sprint-6-m5).
+- **Peer-to-peer gifts** (Sprint 6 M6): sender spends credit to grant
+  premium days or theme ownership to recipient via a LIFF claim link.
+  **NOT credit transfer** — recipient receives a non-fungible
+  entitlement, not money. See [invariant #14](/docsfordevtina/architecture/key-invariants/#14-gifts-grant-entitlements-not-credit).
+- **Admin promo display**: `original_price_X_credit` settings drive the
+  discount badge + strikethrough in LIFF without affecting actual charge.
+
 ## Future ideas
 
 - **Bulk discount tiers** at admin's discretion (e.g. 12 mo = 1500 credit
   instead of 1800) — change one row in `system_settings`
-- **Day Pass** (25 credit = 1 day) for trial users
-- **Themes & cosmetics** purchasable with credit
+- **Day Pass** (25 credit = 1 day) for ad-hoc trial users (the 7-day
+  bundle currently covers this need)
 - **Streak milestone bonus credit** (auto-grant on hitting 7 / 30 / 100
   day streaks) — needs client approval before implementing
-- **Gift credit to another user** — would need recipient lookup + UX
 - **Annual plan promotion** with PromptPay + a discount

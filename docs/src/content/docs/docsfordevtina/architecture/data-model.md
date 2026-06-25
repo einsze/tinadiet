@@ -43,6 +43,8 @@ CREATE TABLE users (
   credit_balance_satang  INTEGER NOT NULL DEFAULT 0,     -- added 0008
   abuse_warning_count    INTEGER NOT NULL DEFAULT 0,     -- added 0008
   is_blocked             INTEGER NOT NULL DEFAULT 0,     -- added 0008
+  active_theme_slug      TEXT,                           -- added 0009 (S6 M5)
+  support_mode_until     TEXT,                           -- added 0013 (2026-06-25)
   created_at             TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at             TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -60,7 +62,17 @@ CREATE TABLE users (
   future submissions auto-route to superadmin review. 5+ → user blocked.
 - `is_blocked` set automatically at 5 warnings, or manually by superadmin.
   When 1, user cannot create new top-ups (`USER_BLOCKED` error).
-- `stripe_customer_id` reserved for future use; Stripe code is dormant.
+- `active_theme_slug` references the user's currently-selected LIFF theme
+  (default, sakura, ocean, forest, sunset, midnight). Theme palette is
+  swapped via CSS variables at runtime.
+- `support_mode_until` (nullable ISO timestamp). When > `now`, all text +
+  image messages to the LINE bot are auto-ACKed and food parser /
+  consultation / vision parsing are suppressed. Team Tina replies via OA
+  Manager Chats tab. User exits via `exit`/`ออก`/etc. or 30-minute auto-
+  expire. Set when user types `support` keyword in chat.
+- `stripe_customer_id` + `omise_customer_id` reserved for future
+  reactivation; both providers currently dormant. Active payment flow is
+  manual PromptPay → credit ledger → bundle redeem.
 
 ### `food_logs`
 One row per logged item. Multi-item AI parses (e.g. "ผัดกะเพรา + ไข่ดาว")
@@ -141,7 +153,8 @@ refining `SYSTEM_PROMPT` in `consultation.ts`.
 
 ### `subscriptions`
 Stripe-only history. Each Stripe subscription = one row. **Currently
-dormant** since payment pivoted to Omise.
+dormant** — payment pivoted first to Omise (also dormant pending KYC),
+then to manual PromptPay top-up + credit ledger as the primary flow.
 
 ```sql
 CREATE TABLE subscriptions (
@@ -222,9 +235,9 @@ CREATE TABLE admin_users (
 ```
 
 **Notes**
-- Migration 0008 seeds 2 superadmin rows for the project owner. Both
-  passwords MUST be rotated before public launch (see [Admin
-  overview](/docsfordevtina/admin/overview/)).
+- Migration 0008 seeds 2 superadmin rows for the project owner. Initial
+  passwords are stored in the local SECRETS file; owner rotates manually
+  via admin `/account` page on their own schedule (no forced rotation).
 - `created_by_admin_id` references admin_users itself (NULL for seeded
   rows). Self-FK is intentional for audit ("who created which operator").
 - Deactivate (`is_active=0`) rather than delete — keeps audit links on
@@ -286,13 +299,22 @@ CREATE TABLE credit_ledger (
   balance_after_satang  INTEGER NOT NULL,                -- snapshot
   source_type           TEXT    NOT NULL CHECK(source_type IN (
                           'manual_topup','omise_topup','admin_grant',
-                          'redeem_premium','revoke_topup','revoke_redeem')),
+                          'redeem_premium','theme_purchase',
+                          'gift_send','gift_refund',
+                          'revoke_topup','revoke_redeem')),
   source_ref_id         INTEGER,
   admin_user_id         INTEGER REFERENCES admin_users(id),
   note                  TEXT,
   created_at            TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 ```
+
+`source_type` enum extended over multiple migrations:
+- `theme_purchase` added in 0009 (S6 M5)
+- `gift_send` + `gift_refund` added in 0010 (S6 M6)
+
+The CHECK constraint is rebuilt each time via table-copy migration since
+SQLite doesn't support `ALTER TABLE ... ADD CHECK`.
 
 **Notes**
 - **Never UPDATE.** Corrections happen via compensating entries.
@@ -328,6 +350,86 @@ CREATE TABLE user_flags (
 - `related_payment_id` is nullable (some flags may be unrelated to a
   specific submission, e.g. retroactive flag after offline complaint).
 
+### `user_themes` (Sprint 6 M5)
+Per-user ownership ledger for purchased LIFF themes. Default theme is
+free + not stored. Other themes (sakura, ocean, forest, sunset, midnight)
+are bought via credit and recorded here with a price snapshot.
+
+```sql
+CREATE TABLE user_themes (
+  id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id                INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  theme_slug             TEXT    NOT NULL,
+  price_credit_snapshot  INTEGER NOT NULL,         -- price at purchase time
+  purchased_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(user_id, theme_slug)
+);
+```
+
+**Notes**
+- `UNIQUE(user_id, theme_slug)` prevents double-purchase.
+- `price_credit_snapshot` is set from `system_settings.price_theme_<slug>_credit`
+  at purchase. Even if admin later changes the price, this row keeps the
+  amount actually paid — useful for revoke/refund math + reconciliation.
+- Theme catalog (slug + palette + pattern SVG) is hardcoded in
+  `liff/src/themes/palettes.ts`. Prices are admin-editable, but set
+  `price=0` to hide the theme from the store while keeping it available
+  to existing owners.
+- Activation: `users.active_theme_slug` references the currently-selected
+  theme. A user can buy multiple themes and switch freely.
+
+### `gifts` (Sprint 6 M6)
+Peer-to-peer gift system. A spends credit to grant Premium-time or a
+Theme to B via a one-time claim link. **Not** credit transfer — the
+recipient receives a non-fungible service entitlement, not currency.
+
+```sql
+CREATE TABLE gifts (
+  id                         INTEGER PRIMARY KEY AUTOINCREMENT,
+  claim_token                TEXT    NOT NULL UNIQUE,    -- 22-char base64url, 128 bits
+  sender_user_id             INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  recipient_user_id          INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  gift_type                  TEXT    NOT NULL CHECK(gift_type IN ('premium','theme')),
+  payload                    TEXT    NOT NULL,           -- JSON: {months: 1|3|6|12|'7d'} or {theme_slug}
+  credit_spent_satang        INTEGER NOT NULL,
+  message                    TEXT,                       -- optional personal note
+  status                     TEXT    NOT NULL DEFAULT 'pending'
+                               CHECK(status IN ('pending','claimed','canceled',
+                                                'expired','refused','revoked')),
+  claim_expires_at           TEXT    NOT NULL,           -- 7 days from create by default
+  claimed_at                 TEXT,
+  canceled_at                TEXT,
+  expired_at                 TEXT,
+  refused_at                 TEXT,
+  refused_reason             TEXT CHECK(refused_reason IN
+                               ('recipient_already_owns_theme','recipient_blocked','self_claim')),
+  revoked_at                 TEXT,
+  revoked_by_admin_id        INTEGER REFERENCES admin_users(id),
+  revoke_reason              TEXT,
+  applied_premium_ms_added   INTEGER,                    -- for deterministic revoke math
+  applied_theme_slug         TEXT,                       -- for deterministic revoke
+  created_at                 TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_at                 TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+```
+
+**Notes**
+- 6-state lifecycle: `pending → claimed | canceled | expired | refused |
+  revoked`. Terminal states are mutually exclusive.
+- Credit escrow: debit at create (`gift_send` ledger entry), refund at any
+  non-pending terminal state (`gift_refund` ledger entry).
+- `claim_token` is `crypto.randomBytes(16).toString('base64url')` — 128
+  bits entropy, URL-safe, no padding.
+- Claim URL form is `https://liff.line.me/<LIFF_ID>/claim/<token>` (LIFF
+  deep link, NOT plain `app.tinadiet.com/claim/...`) so LINE opens it in
+  the LIFF webview with auth context.
+- Daily cron `jobs/expire_gifts.ts` at 03:00 ICT marks `pending` rows
+  past `claim_expires_at` as `expired` + auto-refunds.
+- `applied_premium_ms_added` / `applied_theme_slug` capture the entitle-
+  ment actually granted, so a superadmin revoke can deterministically
+  unwind: subtract ms from `premium_expires_at`, or remove the theme
+  ownership row (and fall back active theme to default if needed).
+
 ### `system_settings` (Sprint 6 M4)
 Key-value singleton config table. Editable via admin dashboard.
 
@@ -344,9 +446,22 @@ Seeded keys (default values in parens):
 - `promptpay_id` (empty) — must be configured before first top-up
 - `promptpay_id_type` (`mobile`)
 - `promptpay_receiver_name` (empty)
-- `price_1mo_credit` (`150`), `price_3mo_credit` (`450`), `price_6mo_credit` (`900`), `price_12mo_credit` (`1800`)
+- Bundle prices in credit (1 credit = 1 THB):
+  - `price_7d_credit` (`49`), `price_1mo_credit` (`150`),
+    `price_3mo_credit` (`450`), `price_6mo_credit` (`900`),
+    `price_12mo_credit` (`1800`)
+- "Original" prices for discount badge display (0 = no badge, set higher
+  than current to show `−X% OFF` strikethrough in LIFF):
+  - `original_price_7d_credit`, `original_price_1mo_credit`,
+    `original_price_3mo_credit`, `original_price_6mo_credit`,
+    `original_price_12mo_credit` (all default `0`)
+- Theme prices in credit (set 0 to hide from store):
+  - `price_theme_sakura_credit`, `price_theme_ocean_credit`,
+    `price_theme_forest_credit`, `price_theme_sunset_credit`,
+    `price_theme_midnight_credit`
 - `high_value_threshold_satang` (`500000` = 5,000 THB)
-- `topup_min_satang` (`5000`), `topup_max_satang` (`500000`)
+- `topup_min_satang` (`5000`, owner lowered to `4900` in production to
+  match the 49 THB / 7-day bundle), `topup_max_satang` (`500000`)
 
 All values are strings; consumers parse to number as needed.
 `updated_by_admin_id` provides audit ("who last changed this setting").
@@ -363,7 +478,10 @@ users (id)
   ├── payments.user_id           (ON DELETE CASCADE)
   ├── manual_payments.user_id    (ON DELETE CASCADE)
   ├── credit_ledger.user_id      (ON DELETE CASCADE)
-  └── user_flags.user_id         (ON DELETE CASCADE)
+  ├── user_flags.user_id         (ON DELETE CASCADE)
+  ├── user_themes.user_id        (ON DELETE CASCADE)
+  ├── gifts.sender_user_id       (ON DELETE CASCADE)
+  └── gifts.recipient_user_id    (ON DELETE SET NULL)  -- preserve audit trail
 
 admin_users (id)
   ├── admin_users.created_by_admin_id (self-FK, NULL for seeded)
@@ -372,7 +490,8 @@ admin_users (id)
   ├── credit_ledger.admin_user_id
   ├── user_flags.flagged_by_admin_id
   ├── user_flags.cleared_by_admin_id
-  └── system_settings.updated_by_admin_id
+  ├── system_settings.updated_by_admin_id
+  └── gifts.revoked_by_admin_id
 
 manual_payments (id)
   └── user_flags.related_payment_id   (nullable)
@@ -380,9 +499,12 @@ manual_payments (id)
 
 Deleting a user via account-delete (`POST /api/v1/account/delete` with
 PDPA flow) cascades all per-user tables including credit_ledger,
-manual_payments, and user_flags. The slip files at
-`slip_file_path` are NOT deleted by the CASCADE — they'd become orphans
-on the volume. Acceptable for now; add a cron sweeper if it grows.
+manual_payments, user_flags, user_themes, and gifts sent by the user.
+Gifts RECEIVED by the deleted user have `recipient_user_id` set to NULL
+(SET NULL not CASCADE) so the sender's outgoing gift list keeps its
+audit trail. The slip files at `slip_file_path` are NOT deleted by the
+CASCADE — they'd become orphans on the volume. Acceptable for now; add
+a cron sweeper if it grows.
 
 ## Index strategy
 
@@ -403,6 +525,11 @@ on the volume. Acceptable for now; add a cron sweeper if it grows.
 - `idx_credit_ledger_user_created` — wallet history view (DESC)
 - `idx_credit_ledger_source` — "show all ledger entries from payment #N"
 - `idx_user_flags_user` — abuse history per user
+- `idx_user_themes_user` — list themes owned by user
+- `idx_gifts_claim_token` UNIQUE — public claim endpoint lookup
+- `idx_gifts_sender_status` — sender's outgoing gift list
+- `idx_gifts_recipient_status` — recipient's incoming gift list
+- `idx_gifts_status_expires` — daily cron `expire_gifts` scan
 
 ## Conventions
 

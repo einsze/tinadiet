@@ -47,6 +47,7 @@ descriptions.
 | Var | Description |
 |---|---|
 | `LINE_LOGIN_CHANNEL_ID` | LIFF channel's Login Channel ID, used to validate LIFF access tokens |
+| `LIFF_ID` | LIFF channel ID (same value as LIFF's `VITE_LIFF_ID`). Used by `services/gifts.ts` to construct claim URLs in the LIFF deep-link form `https://liff.line.me/<LIFF_ID>/claim/<token>` — without it, claim links open in LINE smart browser and fail to authenticate. |
 
 ### OpenAI (REQUIRED for AI features)
 
@@ -68,9 +69,11 @@ descriptions.
 |---|---|---|
 | `CRON_ENABLED` | `true` | Set `false` to disable all scheduled jobs |
 | `CRON_TZ` | `Asia/Bangkok` | Timezone for all cron schedules |
-| `DAILY_SUMMARY_CRON` | `0 21 * * *` | When to fire daily push |
-| `WEEKLY_SUMMARY_CRON` | `0 8 * * 1` | When to fire weekly push (Mon morning) |
-| `EXPIRE_PREMIUM_CRON` | `0 2 * * *` | When to sweep expired premium users |
+| `DAILY_SUMMARY_CRON` | `0 21 * * *` | When to fire daily push (21:00 ICT) |
+| `WEEKLY_SUMMARY_CRON` | `0 8 * * 1` | When to fire weekly push (Mon 08:00 ICT) |
+| `EXPIRE_PREMIUM_CRON` | `0 2 * * *` | When to sweep expired premium users (02:00 ICT) |
+| `RENEWAL_REMINDER_CRON` | `0 10 * * *` | Renewal reminder push for 3d/1d/day-of expiry (10:00 ICT) |
+| `EXPIRE_GIFTS_CRON` | `0 3 * * *` | Expire pending gifts past 7-day claim window (03:00 ICT) |
 | `JOBS_TRIGGER_SECRET` | `''` | Required to call `/internal/jobs/*` endpoints |
 
 ### Stripe (DORMANT)
@@ -105,9 +108,18 @@ descriptions.
 | `SLIP_STORAGE_DIR` | `./data/slips` | Where uploaded slip images live. Production: `/data/slips` (Railway volume) |
 | `SLIP_MAX_BYTES` | `5242880` (5 MB) | Max accepted slip file size |
 
-System runtime config (PromptPay ID, pricing, threshold) is **NOT** env
-vars — it lives in the `system_settings` table and is editable via the
-admin dashboard `/settings` page (superadmin only). See [Admin
+### Gifts (Sprint 6 M6)
+
+| Var | Default | Description |
+|---|---|---|
+| `GIFT_CLAIM_WINDOW_DAYS` | `7` | Days before a pending gift expires + auto-refunds the sender |
+| `GIFT_MAX_PENDING_PER_SENDER` | `5` | Per-sender cap on simultaneously-pending gifts (anti-spam) |
+| `GIFT_MESSAGE_MAX_LENGTH` | `200` | Max chars in optional personal message |
+
+System runtime config (PromptPay ID, pricing, threshold, theme prices,
+original-prices for promo display) is **NOT** env vars — it lives in
+the `system_settings` table and is editable via the admin dashboard
+`/settings` page (superadmin only). See [Admin
 overview](/docsfordevtina/admin/overview/).
 
 ## LIFF (`projects/liff/.env`)

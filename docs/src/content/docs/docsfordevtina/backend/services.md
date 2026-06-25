@@ -106,6 +106,115 @@ When `STRIPE_SECRET_KEY` is empty, all functions throw or routes return
 `503 STRIPE_NOT_CONFIGURED`. LIFF hides Stripe-related UI when
 `/billing/status` returns `stripe_configured: false`.
 
+### `credit.ts`
+
+Single source of truth for credit balance mutations. See
+[invariant #13](/docsfordevtina/architecture/key-invariants/#13-credit-mutations-only-via-applycreditmutation).
+
+```ts
+applyCreditMutation({
+  userId, amountSatang, sourceType, sourceRefId?, adminUserId?, note?
+}) → { ledgerId, newBalanceSatang }
+```
+
+Atomic SQLite transaction = ledger row insert + user balance update.
+Throws on negative balance overflow. NEVER directly UPDATE
+`users.credit_balance_satang` anywhere else.
+
+### `manual_payment.ts`
+
+Orchestrator for the manual PromptPay top-up lifecycle:
+
+```ts
+startManualTopup(user, amountSatang) → ManualPayment
+attachSlip(manualPaymentId, file) → ManualPayment
+approveManualPayment(adminId, id, { actualAmountSatang, flagAbuse }) → ApproveResult
+rejectManualPayment(adminId, id, reason, flagAbuse) → ManualPayment
+revokeManualPayment(adminId, id, reason) → RevokeResult
+cancelOwnTopup(user, id) → boolean
+```
+
+- Validates user not blocked + no existing `awaiting_slip` per user
+- Escalates to `flagged_review` when `actualAmount ≥ high_value_threshold_satang`
+  and the calling admin isn't superadmin
+- Approve flow calls `applyCreditMutation` + (optionally) `flagUserForAbuse`
+
+### `premium_redemption.ts`
+
+Convert credit → premium days via bundle redeem.
+
+```ts
+redeemPremiumBundle(user, bundle: 1 | 3 | 6 | 12 | '7d') → { newExpiry, balance }
+computeNewExpiry(user, bundle, now) → string  // stacking math
+getAllBundlePrices() → Record<bundle, number>
+getAllBundleOriginalPrices() → Record<bundle, number>  // for discount badge
+```
+
+- Stacking via `max(now, current_expiry) + duration`
+- `'7d'` bundle special-cases to `addDaysIso(base, 7)`
+- Numeric bundles use `addMonthsIso`
+
+### `gifts.ts`
+
+Peer-to-peer gift system. Massive module — handles creation, claim,
+cancel, refund, revoke, plus all 6 push notifications.
+
+```ts
+createGift({ sender, recipientLineUserId?, giftType, payload, message }) → Gift
+previewGiftClaim(token) → GiftPreview  // public, no auth
+claimGift(claimer, token) → { entitlementApplied }
+cancelGift(sender, giftId) → Gift
+expirePendingGifts() → { expired }  // cron-called
+revokeGift(adminId, giftId, reason) → RevokeResult
+notifyGiftClaimed(gift, recipient) / notifyGiftCanceled(gift) /
+notifyGiftRefused(gift) / notifyGiftExpired(gift) /
+notifyGiftRevokedToSender(gift) / notifyGiftRevokedToRecipient(gift)
+```
+
+- Claim token: 22-char base64url, 128-bit entropy
+  (`crypto.randomBytes(16).toString('base64url')`)
+- Claim URL is the LIFF deep-link form (`liff.line.me/<id>/claim/<token>`),
+  NOT plain `app.tinadiet.com` ([invariant #15](/docsfordevtina/architecture/key-invariants/#15-liff-deep-links-for-in-line-urls))
+- `applied_premium_ms_added` + `applied_theme_slug` captured at claim
+  time so revoke can unwind deterministically
+
+### `promptpay_qr.ts`
+
+Server-renders a PromptPay EMVCo QR code as a data URL (PNG). Uses
+`promptpay-qr` (payload builder) + `qrcode` (PNG renderer).
+
+```ts
+renderPromptPayQr({ promptpayId, amountSatang, receiverName }) → { dataUrl, payload }
+```
+
+Configured via admin `system_settings.promptpay_id` (mobile / national
+ID) + `promptpay_id_type` + `promptpay_receiver_name`. Returns `503`
+shaped error if not configured.
+
+### `slip_storage.ts`
+
+Multer file storage for top-up slip uploads. Stores files at
+`SLIP_STORAGE_DIR=/data/slips/<uuid>.<ext>`. Max 5 MB, mime allowlist
+JPG / PNG / WEBP. The file path goes in `manual_payments.slip_file_path`
+column; reading uses authenticated `/admin/payments/:id/slip` endpoint.
+
+### `abuse_flag.ts`
+
+Tiered abuse-warning logic (Level B from the original spec):
+
+- 1 warning → `abuse_warning_count++` (no other action)
+- 3 warnings → future submissions auto-route to superadmin review
+- 5 warnings → user auto-blocked (`is_blocked=1`), can no longer top up
+
+Each operator-flagged submission inserts a `user_flags` audit row. Clear
+warnings via superadmin clears all flags + resets count.
+
+### `admin_auth.ts`
+
+bcrypt password verify + 8-hour JWT issuance with `audience='admin'`.
+Falls back to `SESSION_JWT_SECRET` if `ADMIN_JWT_SECRET` not set
+(acceptable for launch but better to set independently in production).
+
 ## OpenAI client convention
 
 A shared client lives in `backend/src/ai/client.ts`:

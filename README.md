@@ -38,11 +38,18 @@ system (credit-funded service grants, NOT e-money), History page (30d
 free / 365d premium), LINE Support mode ("support" keyword → 30min ACK
 window for team manual reply).
 
-**Open**: Dependabot CVE triage (24 vulnerabilities: 8H / 10M / 6L —
-**next session focus**), production hardening (Sentry, rate limiting),
-Omise LIVE flip when Thai business KYC done, lawyer review of
+**Security posture (2026-06-26)**: backend, LIFF, and admin = 0 local npm
+audit vulnerabilities. Dependabot Phase 1 + Phase 2 triage closed
+10 / 24 alerts (commits `ef22a54` + `c60bb4f`). Remaining 14 alerts are
+all docs-site Astro chain — DEV-only build dependency, not exposed to
+production runtime. Accepted as risk pending dedicated Astro 5→6 +
+Starlight 0.30→0.40+ upgrade session.
+
+**Open**: production hardening (Sentry, rate limiting on /webhooks +
+/api), Omise LIVE flip when Thai business KYC done, lawyer review of
 privacy/terms templates to produce Thai version, configure
-`support@tinadiet.com` email forwarding via Cloudflare Email Routing.
+`support@tinadiet.com` email forwarding via Cloudflare Email Routing,
+Astro upgrade for docs site (deferred).
 
 ## Repository layout
 
