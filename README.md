@@ -16,19 +16,33 @@ goals, and consult with Tina (premium).
 | Landing + docs | [tinadiet.com](https://tinadiet.com) | Cloudflare Pages · Astro · Starlight |
 | LINE OA | `@913civqx` (TinaDiet) | LINE Messaging API |
 
-**Sprints closed**: 1, 2, 3, 4 (M1-M3), 5 (M1-M3), 6 (M1-M4).
+**Sprints closed**: 1, 2, 3, 4 (M1-M3), 5 (M1-M3), 6 (M1-M6) + 2026-06-25
+follow-up (History page, Support mode, Thai copy refresh).
 
-**Payment model (current)**: manual PromptPay top-up → credit balance →
-redeem premium bundles. Operators review uploaded slips via the admin
-dashboard. Omise auto-payment is dormant (UI shown as "Coming Soon")
-pending Thai business verification — code will be refactored post-KYC to
-feed the credit ledger too (architectural unification).
+**🟢 LAUNCH-READY** — manual PromptPay payment end-to-end validated in
+production 2026-06-25 (real Thai banking app PromptPay scan → slip upload
+→ operator approve → credit grant → bundle redeem). Can invite real
+paying users.
 
-**Open**: rotate seed superadmin passwords pre-launch, configure
-PromptPay receiver ID in admin settings, test QR scan with 3 major Thai
-banks (Kasikorn / SCB / Krungthai), Dependabot CVE triage (21
-vulnerabilities), production hardening (Sentry, rate limiting), Omise
-LIVE flip when KYC done, lawyer review of legal templates.
+**Payment model**: manual PromptPay top-up → credit balance → redeem
+premium bundles (7d / 1mo / 3mo / 6mo / 12mo at 49 / 150 / 450 / 900 /
+1800 credit default). Operators review uploaded slips via the admin
+dashboard. Omise auto-payment is dormant (UI "Coming Soon") pending Thai
+business verification — code refactor post-KYC to feed the credit ledger
+(architectural unification).
+
+**Active features**: food log (chat AI text + photo vision), nutrition
+consultation (Q&A), weight tracking, daily/weekly cron summaries, streak,
+Theme marketplace (6 themes via CSS-var palette swap), peer-to-peer Gift
+system (credit-funded service grants, NOT e-money), History page (30d
+free / 365d premium), LINE Support mode ("support" keyword → 30min ACK
+window for team manual reply).
+
+**Open**: Dependabot CVE triage (24 vulnerabilities: 8H / 10M / 6L —
+**next session focus**), production hardening (Sentry, rate limiting),
+Omise LIVE flip when Thai business KYC done, lawyer review of
+privacy/terms templates to produce Thai version, configure
+`support@tinadiet.com` email forwarding via Cloudflare Email Routing.
 
 ## Repository layout
 

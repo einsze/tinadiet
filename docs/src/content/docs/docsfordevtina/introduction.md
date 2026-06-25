@@ -26,6 +26,17 @@ collaborators. End-user help lives in the LIFF SupportPage.
 - **Daily + weekly summaries** — push via LINE at 21:00 ICT (daily) and
   Monday 08:00 ICT (weekly).
 - **Streak motivation** — fire emoji badge after 2+ consecutive days.
+- **History** — date-picker view in LIFF for past food logs, weight logs,
+  and macro totals vs goal. Free: rolling 30 days; premium: 365 days.
+- **Themes** — 6 LIFF visual themes (default + sakura / ocean / forest /
+  sunset / midnight), CSS-var palette swap. Owned per user; default free,
+  others priced in credit.
+- **Peer-to-peer Gifts** — credit-funded service grants (premium bundles or
+  themes) sent via LIFF claim link. NOT credit transfer — non-fungible
+  entitlements, admin-revocable, 7-day claim window.
+- **In-LINE Support mode** — user types `support` in chat → bot enters
+  30-minute ACK window so team Tina can manually reply via OA Manager
+  Chats tab without bot interference.
 
 ## Repo layout
 
@@ -57,7 +68,7 @@ git history but have separate `package.json` and dependency trees.
 | Validation | Zod 4 | All API inputs |
 | Session | `jsonwebtoken` | HS256 over `SESSION_JWT_SECRET` |
 | AI | OpenAI SDK v6 (`gpt-4o-mini`, `gpt-4o`) | Strict JSON schema for parsers |
-| Payments | Manual PromptPay top-up → credit ledger | Omise dormant (Coming Soon), Stripe dormant |
+| Payments | Manual PromptPay top-up → credit ledger | Bundles 7d/1mo/3mo/6mo/12mo. Omise dormant (Coming Soon), Stripe dormant. **Launch-validated 2026-06-25.** |
 | QR generation | `promptpay-qr` + `qrcode` npm libs | Server-renders PromptPay QR with amount baked in |
 | Admin auth | `bcryptjs` + JWT (8h, separate audience) | Independent from user LIFF JWT |
 | Frontend | Vite 5 + React 18 + Tailwind 3 | `@line/liff` v2 (LIFF only) |
@@ -86,8 +97,9 @@ discussion:
    compute BMR/TDEE.
 4. **Credit-based monetization.** Users top up credit via manual PromptPay
    transfer (operator-reviewed) and then **redeem** credit for premium
-   bundles (1/3/6/12 months). Omise auto-payment code stays dormant for
-   now ("Coming Soon" in UI), pending Thai business verification. See
+   bundles (7 days / 1 / 3 / 6 / 12 months at 49 / 150 / 450 / 900 / 1800
+   credit default). Omise auto-payment code stays dormant for now ("Coming
+   Soon" in UI), pending Thai business verification. See
    [Payments overview](/docsfordevtina/payments/overview/).
 5. **Operator review for top-up.** Slip upload + manual review is the
    primary cash inflow path. Operators enter the *actual* amount they
