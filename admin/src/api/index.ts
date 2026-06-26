@@ -70,6 +70,7 @@ export const paymentsApi = {
     opts: {
       status?: 'approved' | 'rejected' | 'revoked';
       userId?: number;
+      q?: string;
       limit?: number;
       offset?: number;
     } = {}
@@ -77,6 +78,7 @@ export const paymentsApi = {
     const qs = new URLSearchParams();
     if (opts.status !== undefined) qs.set('status', opts.status);
     if (opts.userId !== undefined) qs.set('user_id', String(opts.userId));
+    if (opts.q !== undefined && opts.q.length > 0) qs.set('q', opts.q);
     qs.set('limit', String(opts.limit ?? 50));
     qs.set('offset', String(opts.offset ?? 0));
     return api.get<PaymentsListResponse>(
@@ -242,9 +244,17 @@ export type AdminGiftListItem = {
 };
 
 export const giftsApi = {
-  list: (opts: { status?: AdminGiftStatus; limit?: number; offset?: number } = {}) => {
+  list: (
+    opts: {
+      status?: AdminGiftStatus;
+      q?: string;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ) => {
     const qs = new URLSearchParams();
     if (opts.status !== undefined) qs.set('status', opts.status);
+    if (opts.q !== undefined && opts.q.length > 0) qs.set('q', opts.q);
     qs.set('limit', String(opts.limit ?? 50));
     qs.set('offset', String(opts.offset ?? 0));
     return api.get<{

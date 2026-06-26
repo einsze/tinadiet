@@ -80,6 +80,12 @@ const stmts = (): Stmts => {
        WHERE status NOT IN ('awaiting_slip', 'pending', 'flagged_review')
          AND (@userId IS NULL OR user_id = @userId)
          AND (@status = '' OR status = @status)
+         AND (@q = ''
+              OR CAST(id AS TEXT) = @q
+              OR user_id IN (
+                SELECT id FROM users
+                WHERE display_name LIKE @qLike OR line_user_id LIKE @qLike
+              ))
        ORDER BY reviewed_at DESC
        LIMIT @limit OFFSET @offset`
     ),
@@ -87,7 +93,13 @@ const stmts = (): Stmts => {
       `SELECT COUNT(*) AS c FROM manual_payments
        WHERE status NOT IN ('awaiting_slip', 'pending', 'flagged_review')
          AND (@userId IS NULL OR user_id = @userId)
-         AND (@status = '' OR status = @status)`
+         AND (@status = '' OR status = @status)
+         AND (@q = ''
+              OR CAST(id AS TEXT) = @q
+              OR user_id IN (
+                SELECT id FROM users
+                WHERE display_name LIKE @qLike OR line_user_id LIKE @qLike
+              ))`
     ),
     countByUserAndStatus: db.prepare(
       `SELECT COUNT(*) AS c FROM manual_payments
@@ -209,12 +221,15 @@ export const manualPaymentsRepository = {
   listHistory: (input: {
     userId: number | null;
     status: ManualPaymentStatus | '';
+    q: string;
     limit: number;
     offset: number;
   }): ManualPayment[] => {
     const rows = stmts().listHistory.all({
       userId: input.userId,
       status: input.status,
+      q: input.q,
+      qLike: `%${input.q}%`,
       limit: input.limit,
       offset: input.offset,
     }) as RawManualPayment[];
@@ -224,10 +239,13 @@ export const manualPaymentsRepository = {
   countHistory: (input: {
     userId: number | null;
     status: ManualPaymentStatus | '';
+    q: string;
   }): number => {
     const row = stmts().countHistory.get({
       userId: input.userId,
       status: input.status,
+      q: input.q,
+      qLike: `%${input.q}%`,
     }) as { c: number };
     return row.c;
   },

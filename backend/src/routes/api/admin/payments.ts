@@ -84,15 +84,18 @@ router.get('/history', requireAdmin, (req: Request, res: Response) => {
       ? Number(userIdRaw)
       : null;
   const resolvedUserId = Number.isInteger(userId) ? userId : null;
+  const q = String(req.query.q ?? '').trim();
   const payments = manualPaymentsRepository.listHistory({
     userId: resolvedUserId,
     status,
+    q,
     limit,
     offset,
   });
   const total = manualPaymentsRepository.countHistory({
     userId: resolvedUserId,
     status,
+    q,
   });
   const userMap = enrichWithUserSummary(payments);
   res.status(200).json({

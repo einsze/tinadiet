@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  Search,
 } from 'lucide-react';
 import { giftsApi, type AdminGiftListItem, type AdminGiftStatus } from '../api/index.js';
 import { Pagination } from '../components/Pagination.js';
@@ -79,12 +80,14 @@ export const GiftsListPage = () => {
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await giftsApi.list({
         status: status === '' ? undefined : status,
+        q: query,
         limit: PAGE_SIZE,
         offset,
       });
@@ -93,7 +96,7 @@ export const GiftsListPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [status, offset]);
+  }, [status, query, offset]);
 
   useEffect(() => {
     void load();
@@ -113,6 +116,20 @@ export const GiftsListPage = () => {
           </p>
         </div>
       </header>
+
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOffset(0);
+          }}
+          placeholder="Cari nama, LINE ID, atau #ID gift…"
+          className="w-full rounded-lg border border-slate-300 bg-white pl-8 pr-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+        />
+      </div>
 
       <div className="flex gap-1 rounded-lg bg-white p-1 shadow-sm">
         <button

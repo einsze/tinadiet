@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History, Loader2 } from 'lucide-react';
+import { History, Loader2, Search } from 'lucide-react';
 import { paymentsApi } from '../api/index.js';
 import type { ManualPaymentWithUser } from '../types/index.js';
 import { formatThb } from '../types/index.js';
@@ -29,6 +29,7 @@ export const PaymentsHistoryPage = () => {
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>('all');
+  const [query, setQuery] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -37,6 +38,7 @@ export const PaymentsHistoryPage = () => {
       if (filter !== 'all') opts.status = filter;
       const res = await paymentsApi.history({
         ...opts,
+        q: query,
         limit: PAGE_SIZE,
         offset,
       });
@@ -45,7 +47,7 @@ export const PaymentsHistoryPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [filter, offset]);
+  }, [filter, query, offset]);
 
   useEffect(() => {
     void load();
@@ -62,6 +64,20 @@ export const PaymentsHistoryPage = () => {
           All approved, rejected, and revoked submissions
         </p>
       </header>
+
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOffset(0);
+          }}
+          placeholder="Cari nama, LINE ID, atau #ID payment…"
+          className="w-full rounded-lg border border-slate-300 bg-white pl-8 pr-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+        />
+      </div>
 
       <div className="flex flex-wrap gap-2">
         {(['all', 'approved', 'rejected', 'revoked'] as const).map((f) => (

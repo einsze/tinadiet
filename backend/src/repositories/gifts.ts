@@ -24,9 +24,7 @@ type Stmts = {
   listReceived: Statement;
   countPendingBySender: Statement;
   listAdmin: Statement;
-  listAdminFiltered: Statement;
   countAdmin: Statement;
-  countAdminFiltered: Statement;
   markClaimed: Statement;
   markCanceled: Statement;
   markExpired: Statement;
@@ -69,18 +67,33 @@ const stmts = (): Stmts => {
     ),
     listAdmin: db.prepare(
       `SELECT ${COLUMNS} FROM gifts
-       ORDER BY created_at DESC
-       LIMIT @limit OFFSET @offset`
-    ),
-    listAdminFiltered: db.prepare(
-      `SELECT ${COLUMNS} FROM gifts
        WHERE (@status = '' OR status = @status)
+         AND (@q = ''
+              OR CAST(id AS TEXT) = @q
+              OR sender_user_id IN (
+                SELECT id FROM users
+                WHERE display_name LIKE @qLike OR line_user_id LIKE @qLike
+              )
+              OR recipient_user_id IN (
+                SELECT id FROM users
+                WHERE display_name LIKE @qLike OR line_user_id LIKE @qLike
+              ))
        ORDER BY created_at DESC
        LIMIT @limit OFFSET @offset`
     ),
-    countAdmin: db.prepare(`SELECT COUNT(*) AS c FROM gifts`),
-    countAdminFiltered: db.prepare(
-      `SELECT COUNT(*) AS c FROM gifts WHERE status = @status`
+    countAdmin: db.prepare(
+      `SELECT COUNT(*) AS c FROM gifts
+       WHERE (@status = '' OR status = @status)
+         AND (@q = ''
+              OR CAST(id AS TEXT) = @q
+              OR sender_user_id IN (
+                SELECT id FROM users
+                WHERE display_name LIKE @qLike OR line_user_id LIKE @qLike
+              )
+              OR recipient_user_id IN (
+                SELECT id FROM users
+                WHERE display_name LIKE @qLike OR line_user_id LIKE @qLike
+              ))`
     ),
     markClaimed: db.prepare(
       `UPDATE gifts
@@ -212,27 +225,27 @@ export const giftsRepository = {
     return stmts().listExpiringPending.all(nowIso) as Gift[];
   },
 
-  listAdmin: (
-    status: GiftStatus | '',
-    limit: number,
-    offset: number
-  ): Gift[] => {
-    if (status === '') {
-      return stmts().listAdmin.all({ limit, offset }) as Gift[];
-    }
-    return stmts().listAdminFiltered.all({
-      status,
-      limit,
-      offset,
+  listAdmin: (input: {
+    status: GiftStatus | '';
+    q: string;
+    limit: number;
+    offset: number;
+  }): Gift[] => {
+    return stmts().listAdmin.all({
+      status: input.status,
+      q: input.q,
+      qLike: `%${input.q}%`,
+      limit: input.limit,
+      offset: input.offset,
     }) as Gift[];
   },
 
-  countAdmin: (status: GiftStatus | ''): number => {
-    if (status === '') {
-      const row = stmts().countAdmin.get() as { c: number };
-      return row.c;
-    }
-    const row = stmts().countAdminFiltered.get({ status }) as { c: number };
+  countAdmin: (input: { status: GiftStatus | ''; q: string }): number => {
+    const row = stmts().countAdmin.get({
+      status: input.status,
+      q: input.q,
+      qLike: `%${input.q}%`,
+    }) as { c: number };
     return row.c;
   },
 };
