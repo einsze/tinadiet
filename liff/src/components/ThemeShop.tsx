@@ -65,6 +65,25 @@ const ThemeCard = ({
     ? 'ring-2 ring-brand-500'
     : 'ring-1 ring-slate-200';
 
+  const isGiftable =
+    !theme.is_default && theme.for_sale && (theme.price_credit ?? 0) > 0;
+
+  const giftButton = isGiftable ? (
+    <button
+      type="button"
+      onClick={() => onGift(theme.slug, theme.price_credit ?? 0)}
+      disabled={!canAfford || busy}
+      className="flex items-center justify-center gap-1 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+      title={
+        canAfford
+          ? 'ส่งเป็นของขวัญ'
+          : `ต้องมีอีก ${formatCredit(priceSatang - balance)} credit เพื่อส่งของขวัญ`
+      }
+    >
+      <GiftIcon className="h-3.5 w-3.5" />
+    </button>
+  ) : null;
+
   return (
     <div
       className={`relative rounded-xl bg-white p-4 shadow-sm transition ${ringClass}`}
@@ -110,24 +129,30 @@ const ThemeCard = ({
 
       <div className="mt-3 flex items-center gap-2">
         {theme.is_active ? (
-          <button
-            type="button"
-            disabled
-            className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 ring-1 ring-brand-200"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            กำลังใช้งาน
-          </button>
+          <>
+            <button
+              type="button"
+              disabled
+              className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 ring-1 ring-brand-200"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              กำลังใช้งาน
+            </button>
+            {giftButton}
+          </>
         ) : theme.owned ? (
-          <button
-            type="button"
-            onClick={() => onActivate(theme.slug)}
-            disabled={busy}
-            className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            <span>ใช้ธีมนี้</span>
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => onActivate(theme.slug)}
+              disabled={busy}
+              className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              <span>ใช้ธีมนี้</span>
+            </button>
+            {giftButton}
+          </>
         ) : theme.for_sale ? (
           <>
             <button
@@ -151,17 +176,7 @@ const ThemeCard = ({
                   : `ต้องมีอีก ${formatCredit(priceSatang - balance)} credit`}
               </span>
             </button>
-            <button
-              type="button"
-              onClick={() =>
-                onGift(theme.slug, theme.price_credit ?? 0)
-              }
-              disabled={!canAfford || busy}
-              className="flex items-center justify-center gap-1 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
-              title="ส่งเป็นของขวัญ"
-            >
-              <GiftIcon className="h-3.5 w-3.5" />
-            </button>
+            {giftButton}
           </>
         ) : (
           <button
