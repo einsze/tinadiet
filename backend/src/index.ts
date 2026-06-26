@@ -4,6 +4,7 @@ import cors from 'cors';
 import { env } from './config/env.js';
 import { runMigrations } from './db/migrate.js';
 import { dbFilePath } from './db/sqlite.js';
+import { validateSlipStorageAtStartup } from './services/slip_storage.js';
 import apiV1Router from './routes/api/index.js';
 import lineWebhookRouter from './routes/webhook/line.js';
 import stripeWebhookRouter from './routes/webhook/stripe.js';
@@ -21,6 +22,8 @@ console.log(
     migrations_skipped: migrationResult.skipped.length,
   })
 );
+
+await validateSlipStorageAtStartup();
 
 const app = express();
 const STARTED_AT = new Date().toISOString();

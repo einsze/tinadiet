@@ -37,6 +37,9 @@ export const PaymentDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [slipBlobUrl, setSlipBlobUrl] = useState<string | null>(null);
+  type SlipState = 'idle' | 'loading' | 'loaded' | 'missing' | 'error';
+  const [slipState, setSlipState] = useState<SlipState>('idle');
+  const [slipErrorDetail, setSlipErrorDetail] = useState<string | null>(null);
   const [panel, setPanel] = useState<ActionPanel>('none');
   const [actionPending, setActionPending] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -84,23 +87,40 @@ export const PaymentDetailPage = () => {
 
   // Fetch slip image as blob (so we can include auth header)
   useEffect(() => {
-    if (detail === null || detail.payment.slip_file_path === null) return;
+    if (detail === null || detail.payment.slip_file_path === null) {
+      setSlipState('idle');
+      return;
+    }
     let cancelled = false;
     let activeUrl: string | null = null;
+    setSlipState('loading');
+    setSlipErrorDetail(null);
     (async () => {
       try {
         const res = await fetch(
           buildAuthedUrl(`/api/v1/admin/payments/${paymentId}/slip`),
           { headers: buildAuthHeader() }
         );
-        if (!res.ok) throw new Error(`Slip fetch failed: ${res.status}`);
+        if (res.status === 404) {
+          if (!cancelled) setSlipState('missing');
+          return;
+        }
+        if (!res.ok) {
+          if (!cancelled) {
+            setSlipState('error');
+            setSlipErrorDetail(`HTTP ${res.status}`);
+          }
+          return;
+        }
         const blob = await res.blob();
         if (cancelled) return;
         activeUrl = URL.createObjectURL(blob);
         setSlipBlobUrl(activeUrl);
+        setSlipState('loaded');
       } catch (err) {
         if (!cancelled) {
-          console.error('Slip fetch failed', err);
+          setSlipState('error');
+          setSlipErrorDetail(err instanceof Error ? err.message : String(err));
         }
       }
     })();
@@ -343,11 +363,37 @@ export const PaymentDetailPage = () => {
         </h3>
         {p.slip_file_path === null ? (
           <p className="mt-2 text-sm text-slate-400">No slip uploaded yet</p>
-        ) : slipBlobUrl === null ? (
+        ) : slipState === 'loading' || slipState === 'idle' ? (
           <div className="mt-2 flex h-32 items-center justify-center text-sm text-slate-400">
             <Loader2 className="h-4 w-4 animate-spin" />
           </div>
-        ) : (
+        ) : slipState === 'missing' ? (
+          <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <div className="flex items-center gap-2 font-semibold">
+              <AlertTriangle className="h-4 w-4" />
+              File slip hilang dari storage
+            </div>
+            <p className="mt-1 text-xs">
+              DB masih menunjuk file ini, tapi file sudah tidak ada di volume.
+              Kemungkinan file ter-upload sebelum <code>SLIP_STORAGE_DIR</code>{' '}
+              di-set ke volume persisten (<code>/data/slips</code>) dan hilang
+              saat redeploy.
+            </p>
+            <p className="mt-1 break-all font-mono text-[10px] text-amber-700">
+              path: {p.slip_file_path}
+            </p>
+          </div>
+        ) : slipState === 'error' ? (
+          <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+            <div className="flex items-center gap-2 font-semibold">
+              <AlertTriangle className="h-4 w-4" />
+              Gagal memuat slip
+            </div>
+            {slipErrorDetail !== null && (
+              <p className="mt-1 text-xs">{slipErrorDetail}</p>
+            )}
+          </div>
+        ) : slipBlobUrl !== null ? (
           <div className="mt-2">
             <a
               href={slipBlobUrl}
@@ -365,7 +411,7 @@ export const PaymentDetailPage = () => {
               Tap to open fullscreen
             </p>
           </div>
-        )}
+        ) : null}
       </section>
 
       {/* Action panel */}

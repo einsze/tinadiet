@@ -1,7 +1,37 @@
-import { promises as fs } from 'node:fs';
+import { promises as fs, constants as fsConstants } from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { env } from '../config/env.js';
+
+export const validateSlipStorageAtStartup = async (): Promise<void> => {
+  const dir = env.SLIP_STORAGE_DIR;
+  const isAbsolute = path.isAbsolute(dir);
+  const isProd = env.NODE_ENV === 'production';
+
+  if (isProd && !isAbsolute) {
+    throw new Error(
+      `SLIP_STORAGE_DIR must be an absolute path in production (got "${dir}"). ` +
+        `On Railway, set it to "/data/slips" so uploads land on the persistent volume, ` +
+        `not ephemeral container storage.`
+    );
+  }
+
+  await fs.mkdir(dir, { recursive: true });
+  await fs.access(dir, fsConstants.W_OK);
+
+  const probe = path.join(dir, `.write-probe-${randomUUID()}`);
+  await fs.writeFile(probe, '');
+  await fs.unlink(probe);
+
+  console.log(
+    JSON.stringify({
+      level: 'info',
+      msg: 'slip.storage.ready',
+      dir,
+      absolute: isAbsolute,
+    })
+  );
+};
 
 export class SlipStorageError extends Error {
   constructor(
