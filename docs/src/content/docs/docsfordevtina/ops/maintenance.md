@@ -440,6 +440,59 @@ console.log("done");
 '
 ```
 
+### Slip files missing from storage
+
+**Symptoms:** Admin opens a payment detail page → slip area shows
+**"File slip hilang dari storage"** in an amber panel (post-fix UX). Or
+older deploys: perpetual loading spinner + `Slip fetch failed: 404` in
+the browser console.
+
+**Root cause (June 2026 incident, payment #1):** the backend env var
+`SLIP_STORAGE_DIR` was unset, so the default `./data/slips` (relative)
+was used. `path.join('./data/slips', '<uuid>.jpg')` writes to the
+container's working directory (`/app/data/slips/`) — **ephemeral**, not
+the Railway volume mount at `/data`. Every redeploy wipes the container
+filesystem; the DB row still points at the now-dead path.
+
+**Diagnose** via Railway Console for the backend service:
+
+```bash
+echo "SLIP_STORAGE_DIR=$SLIP_STORAGE_DIR"
+node -e "
+const Database = require('better-sqlite3');
+const db = new Database('/data/app.db');
+const row = db.prepare('SELECT id, slip_file_path, slip_mime_type FROM manual_payments WHERE id = ?').get(<PAYMENT_ID>);
+console.log(row);
+const fs = require('fs');
+if (row?.slip_file_path) console.log('exists:', fs.existsSync(row.slip_file_path));
+"
+```
+
+If `slip_file_path` lacks a leading `/` (e.g. `data/slips/<uuid>.jpg`)
+the row was written by the broken default. The file is gone.
+
+**Fix going forward:**
+
+1. Set `SLIP_STORAGE_DIR=/data/slips` in Railway Variables (backend
+   service). Redeploy. The startup guard `validateSlipStorageAtStartup()`
+   now refuses to boot if this is missing or relative in production —
+   so this can't silently regress.
+2. For each payment with a dead slip reference, null out the path so
+   the admin UI doesn't show the "missing" warning forever:
+
+```bash
+node -e "
+const Database = require('better-sqlite3');
+const db = new Database('/data/app.db');
+db.prepare('UPDATE manual_payments SET slip_file_path = NULL, slip_mime_type = NULL WHERE id = ?').run(<PAYMENT_ID>);
+console.log('cleared');
+"
+```
+
+After that the row shows **"No slip uploaded yet"** — operator can
+ask the user to re-upload from LIFF, or rely on the previous
+already-recorded approval/rejection if reviewed before the file vanished.
+
 ### Cloudflare build red
 
 **Symptoms:** Push to main, Cloudflare Pages or Workers build shows

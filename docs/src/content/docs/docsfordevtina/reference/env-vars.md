@@ -105,7 +105,7 @@ descriptions.
 |---|---|---|
 | `ADMIN_JWT_SECRET` | falls back to `SESSION_JWT_SECRET` | HS256 secret for admin JWT (8h, audience='admin'). **Set separately in prod** for isolation from user-facing LIFF tokens. |
 | `ADMIN_BASE_URL` | `https://admin.tinadiet.com` | Admin dashboard URL (rarely used directly) |
-| `SLIP_STORAGE_DIR` | `./data/slips` | Where uploaded slip images live. Production: `/data/slips` (Railway volume) |
+| `SLIP_STORAGE_DIR` | `./data/slips` | Where uploaded slip images live. **Production: MUST be absolute path on the Railway volume** (`/data/slips`). Container `validateSlipStorageAtStartup()` crashes at boot if `NODE_ENV=production` and the path is relative — this is intentional, to avoid silently writing to ephemeral container storage and losing files on the next redeploy. |
 | `SLIP_MAX_BYTES` | `5242880` (5 MB) | Max accepted slip file size |
 
 ### Gifts (Sprint 6 M6)

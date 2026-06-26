@@ -198,6 +198,21 @@ Multer file storage for top-up slip uploads. Stores files at
 JPG / PNG / WEBP. The file path goes in `manual_payments.slip_file_path`
 column; reading uses authenticated `/admin/payments/:id/slip` endpoint.
 
+`validateSlipStorageAtStartup()` runs from `index.ts` right after
+migrations. It:
+
+1. Throws if `NODE_ENV=production` and `SLIP_STORAGE_DIR` is a
+   relative path (silent ephemeral storage is the root cause of the
+   2026-06-26 lost-slip incident — see [Maintenance Guide →
+   Incident: slip files missing from storage](/docsfordevtina/ops/maintenance/#slip-files-missing-from-storage))
+2. `mkdir -p` the directory
+3. Verifies it's writable with a probe file (create + delete)
+4. Logs `slip.storage.ready` with the resolved absolute path
+
+If any step fails, the process exits before the HTTP server starts —
+so a misconfigured deploy is loudly visible (Railway shows crash loop)
+rather than silently dropping every future upload.
+
 ### `abuse_flag.ts`
 
 Tiered abuse-warning logic (Level B from the original spec):

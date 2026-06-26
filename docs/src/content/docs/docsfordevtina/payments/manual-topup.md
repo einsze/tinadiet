@@ -79,8 +79,11 @@ from gallery/camera.
 
 `POST /api/v1/topup/manual/:paymentId/upload-slip` (multipart):
 - `multer` validates: max 5 MB, MIME in `image/jpeg|png|webp`
-- Saves to `<SLIP_STORAGE_DIR>/<uuid>.<ext>` (default
-  `/data/slips/` on Railway volume)
+- Saves to `<SLIP_STORAGE_DIR>/<uuid>.<ext>`. Default is `./data/slips`
+  (relative — fine for local dev). **Production must set
+  `SLIP_STORAGE_DIR=/data/slips`** so files land on the Railway
+  persistent volume; a startup guard crashes the container if the env
+  var is missing or relative when `NODE_ENV=production`.
 - Updates `manual_payments` row with `slip_file_path`, `slip_mime_type`,
   `slip_size_bytes`, transitions `status='pending'`
 
