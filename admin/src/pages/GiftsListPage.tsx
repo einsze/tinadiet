@@ -9,6 +9,9 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { giftsApi, type AdminGiftListItem, type AdminGiftStatus } from '../api/index.js';
+import { Pagination } from '../components/Pagination.js';
+
+const PAGE_SIZE = 20;
 
 const STATUSES: AdminGiftStatus[] = [
   'pending',
@@ -73,6 +76,8 @@ const describePayload = (g: AdminGiftListItem): string => {
 export const GiftsListPage = () => {
   const [status, setStatus] = useState<AdminGiftStatus | ''>('');
   const [gifts, setGifts] = useState<AdminGiftListItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -80,13 +85,15 @@ export const GiftsListPage = () => {
     try {
       const res = await giftsApi.list({
         status: status === '' ? undefined : status,
-        limit: 100,
+        limit: PAGE_SIZE,
+        offset,
       });
       setGifts(res.gifts);
+      setTotal(res.pagination.total);
     } finally {
       setLoading(false);
     }
-  }, [status]);
+  }, [status, offset]);
 
   useEffect(() => {
     void load();
@@ -110,7 +117,10 @@ export const GiftsListPage = () => {
       <div className="flex gap-1 rounded-lg bg-white p-1 shadow-sm">
         <button
           type="button"
-          onClick={() => setStatus('')}
+          onClick={() => {
+            setStatus('');
+            setOffset(0);
+          }}
           className={`rounded-md px-3 py-1.5 text-xs font-medium ${
             status === ''
               ? 'bg-brand-100 text-brand-700'
@@ -123,7 +133,10 @@ export const GiftsListPage = () => {
           <button
             key={s}
             type="button"
-            onClick={() => setStatus(s)}
+            onClick={() => {
+              setStatus(s);
+              setOffset(0);
+            }}
             className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize ${
               status === s
                 ? 'bg-brand-100 text-brand-700'
@@ -144,6 +157,7 @@ export const GiftsListPage = () => {
           No gifts to show.
         </div>
       ) : (
+        <>
         <div className="rounded-xl bg-white shadow-sm">
           <table className="w-full text-xs">
             <thead className="border-b border-slate-200 text-left text-[10px] uppercase tracking-wide text-slate-500">
@@ -192,6 +206,14 @@ export const GiftsListPage = () => {
             </tbody>
           </table>
         </div>
+        <Pagination
+          total={total}
+          limit={PAGE_SIZE}
+          offset={offset}
+          onChange={setOffset}
+          label="gifts"
+        />
+        </>
       )}
     </div>
   );

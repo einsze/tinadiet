@@ -25,6 +25,8 @@ type Stmts = {
   countPendingBySender: Statement;
   listAdmin: Statement;
   listAdminFiltered: Statement;
+  countAdmin: Statement;
+  countAdminFiltered: Statement;
   markClaimed: Statement;
   markCanceled: Statement;
   markExpired: Statement;
@@ -75,6 +77,10 @@ const stmts = (): Stmts => {
        WHERE (@status = '' OR status = @status)
        ORDER BY created_at DESC
        LIMIT @limit OFFSET @offset`
+    ),
+    countAdmin: db.prepare(`SELECT COUNT(*) AS c FROM gifts`),
+    countAdminFiltered: db.prepare(
+      `SELECT COUNT(*) AS c FROM gifts WHERE status = @status`
     ),
     markClaimed: db.prepare(
       `UPDATE gifts
@@ -219,5 +225,14 @@ export const giftsRepository = {
       limit,
       offset,
     }) as Gift[];
+  },
+
+  countAdmin: (status: GiftStatus | ''): number => {
+    if (status === '') {
+      const row = stmts().countAdmin.get() as { c: number };
+      return row.c;
+    }
+    const row = stmts().countAdminFiltered.get({ status }) as { c: number };
+    return row.c;
   },
 };

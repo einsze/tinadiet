@@ -9,6 +9,9 @@ import {
 import { usersApi } from '../api/index.js';
 import type { UserListEntry } from '../types/index.js';
 import { formatThb } from '../types/index.js';
+import { Pagination } from '../components/Pagination.js';
+
+const PAGE_SIZE = 20;
 
 const formatDate = (iso: string | null): string => {
   if (iso === null) return '—';
@@ -22,6 +25,8 @@ const formatDate = (iso: string | null): string => {
 export const UsersListPage = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserListEntry[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [flaggedOnly, setFlaggedOnly] = useState(false);
@@ -29,12 +34,18 @@ export const UsersListPage = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await usersApi.list({ q: query, flagged: flaggedOnly });
+      const res = await usersApi.list({
+        q: query,
+        flagged: flaggedOnly,
+        limit: PAGE_SIZE,
+        offset,
+      });
       setUsers(res.users);
+      setTotal(res.pagination.total);
     } finally {
       setLoading(false);
     }
-  }, [query, flaggedOnly]);
+  }, [query, flaggedOnly, offset]);
 
   useEffect(() => {
     void load();
@@ -58,7 +69,10 @@ export const UsersListPage = () => {
           <input
             type="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOffset(0);
+            }}
             placeholder="Search…"
             className="w-full rounded-lg border border-slate-300 bg-white pl-8 pr-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
           />
@@ -67,7 +81,10 @@ export const UsersListPage = () => {
           <input
             type="checkbox"
             checked={flaggedOnly}
-            onChange={(e) => setFlaggedOnly(e.target.checked)}
+            onChange={(e) => {
+              setFlaggedOnly(e.target.checked);
+              setOffset(0);
+            }}
           />
           Flagged only
         </label>
@@ -83,6 +100,7 @@ export const UsersListPage = () => {
           No users found
         </div>
       ) : (
+        <>
         <div className="overflow-hidden rounded-xl bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -151,6 +169,14 @@ export const UsersListPage = () => {
             </tbody>
           </table>
         </div>
+        <Pagination
+          total={total}
+          limit={PAGE_SIZE}
+          offset={offset}
+          onChange={setOffset}
+          label="pengguna"
+        />
+        </>
       )}
     </div>
   );

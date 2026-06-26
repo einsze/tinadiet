@@ -5,6 +5,9 @@ import { paymentsApi } from '../api/index.js';
 import type { ManualPaymentWithUser } from '../types/index.js';
 import { formatThb } from '../types/index.js';
 import { StatusBadge } from '../components/StatusBadge.js';
+import { Pagination } from '../components/Pagination.js';
+
+const PAGE_SIZE = 20;
 
 type StatusFilter = 'all' | 'approved' | 'rejected' | 'revoked';
 
@@ -22,6 +25,8 @@ const formatDate = (iso: string | null): string => {
 export const PaymentsHistoryPage = () => {
   const navigate = useNavigate();
   const [payments, setPayments] = useState<ManualPaymentWithUser[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>('all');
 
@@ -30,12 +35,17 @@ export const PaymentsHistoryPage = () => {
     try {
       const opts: { status?: 'approved' | 'rejected' | 'revoked' } = {};
       if (filter !== 'all') opts.status = filter;
-      const res = await paymentsApi.history({ ...opts, limit: 100 });
+      const res = await paymentsApi.history({
+        ...opts,
+        limit: PAGE_SIZE,
+        offset,
+      });
       setPayments(res.payments);
+      setTotal(res.pagination.total);
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter, offset]);
 
   useEffect(() => {
     void load();
@@ -58,7 +68,10 @@ export const PaymentsHistoryPage = () => {
           <button
             key={f}
             type="button"
-            onClick={() => setFilter(f)}
+            onClick={() => {
+              setFilter(f);
+              setOffset(0);
+            }}
             className={`rounded-full px-3 py-1 text-xs font-semibold capitalize transition ${
               filter === f
                 ? 'bg-brand-600 text-white'
@@ -80,6 +93,7 @@ export const PaymentsHistoryPage = () => {
           No history yet
         </div>
       ) : (
+        <>
         <div className="overflow-hidden rounded-xl bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -130,6 +144,14 @@ export const PaymentsHistoryPage = () => {
             </tbody>
           </table>
         </div>
+        <Pagination
+          total={total}
+          limit={PAGE_SIZE}
+          offset={offset}
+          onChange={setOffset}
+          label="pembayaran"
+        />
+        </>
       )}
     </div>
   );

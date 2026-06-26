@@ -36,6 +36,7 @@ type Stmts = {
   revertAllExpired: Statement;
   deleteById: Statement;
   search: Statement;
+  countSearch: Statement;
   setPremiumExpiresAt: Statement;
   updateCreditBalance: Statement;
   incrementAbuseCount: Statement;
@@ -164,6 +165,12 @@ const stmts = (): Stmts => {
        ORDER BY id DESC
        LIMIT @limit OFFSET @offset`
     ),
+    countSearch: db.prepare(
+      `SELECT COUNT(*) AS c FROM users
+       WHERE
+         (@q = '' OR display_name LIKE @qLike OR line_user_id LIKE @qLike)
+         AND (@flagged = 0 OR abuse_warning_count > 0 OR is_blocked = 1)`
+    ),
     setPremiumExpiresAt: db.prepare(
       `UPDATE users
        SET premium_expires_at = ?, updated_at = datetime('now')
@@ -274,6 +281,15 @@ export const userRepository = {
       offset: input.offset,
     }) as RawUser[];
     return rows.map((r) => hydrate(r) as User);
+  },
+
+  countSearch: (input: { query: string; flaggedOnly: boolean }): number => {
+    const row = stmts().countSearch.get({
+      q: input.query,
+      qLike: `%${input.query}%`,
+      flagged: input.flaggedOnly ? 1 : 0,
+    }) as { c: number };
+    return row.c;
   },
 
   findByStripeCustomerId: (stripeCustomerId: string): User | undefined => {

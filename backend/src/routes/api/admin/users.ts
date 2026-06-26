@@ -27,6 +27,7 @@ router.get('/', requireAdmin, (req: Request, res: Response) => {
   );
 
   const users = userRepository.search({ query, flaggedOnly, limit, offset });
+  const total = userRepository.countSearch({ query, flaggedOnly });
   res.status(200).json({
     users: users.map((u) => ({
       id: u.id,
@@ -40,7 +41,7 @@ router.get('/', requireAdmin, (req: Request, res: Response) => {
       is_premium: isPremium(u),
       created_at: u.created_at,
     })),
-    pagination: { limit, offset },
+    pagination: { limit, offset, total },
   });
 });
 

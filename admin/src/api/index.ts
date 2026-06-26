@@ -33,7 +33,7 @@ export const authApi = {
 
 export type PaymentsListResponse = {
   payments: ManualPaymentWithUser[];
-  pagination: { limit: number; offset: number };
+  pagination: { limit: number; offset: number; total: number };
 };
 
 export type PaymentDetailResponse = {
@@ -117,7 +117,7 @@ export const paymentsApi = {
 
 export type UsersListResponse = {
   users: UserListEntry[];
-  pagination: { limit: number; offset: number };
+  pagination: { limit: number; offset: number; total: number };
 };
 
 export type UserDetailResponse = {
@@ -247,9 +247,10 @@ export const giftsApi = {
     if (opts.status !== undefined) qs.set('status', opts.status);
     qs.set('limit', String(opts.limit ?? 50));
     qs.set('offset', String(opts.offset ?? 0));
-    return api.get<{ gifts: AdminGiftListItem[] }>(
-      `/api/v1/admin/gifts?${qs.toString()}`
-    );
+    return api.get<{
+      gifts: AdminGiftListItem[];
+      pagination: { limit: number; offset: number; total: number };
+    }>(`/api/v1/admin/gifts?${qs.toString()}`);
   },
   detail: (id: number) =>
     api.get<{ gift: AdminGiftListItem }>(`/api/v1/admin/gifts/${id}`),

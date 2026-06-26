@@ -10,6 +10,9 @@ import { paymentsApi } from '../api/index.js';
 import type { ManualPaymentWithUser } from '../types/index.js';
 import { formatThb } from '../types/index.js';
 import { StatusBadge } from '../components/StatusBadge.js';
+import { Pagination } from '../components/Pagination.js';
+
+const PAGE_SIZE = 20;
 
 const formatRelative = (iso: string): string => {
   const ms = Date.now() - new Date(iso).getTime();
@@ -26,6 +29,8 @@ const formatRelative = (iso: string): string => {
 export const PaymentsPendingPage = () => {
   const navigate = useNavigate();
   const [payments, setPayments] = useState<ManualPaymentWithUser[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,15 +38,16 @@ export const PaymentsPendingPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await paymentsApi.pending(100);
+      const res = await paymentsApi.pending(PAGE_SIZE, offset);
       setPayments(res.payments);
+      setTotal(res.pagination.total);
     } catch (err) {
       const apiErr = err as { message?: string };
       setError(apiErr.message ?? 'Failed to load');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [offset]);
 
   useEffect(() => {
     void load();
@@ -95,6 +101,7 @@ export const PaymentsPendingPage = () => {
       )}
 
       {payments.length > 0 && (
+        <>
         <div className="overflow-hidden rounded-xl bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -153,6 +160,14 @@ export const PaymentsPendingPage = () => {
             </tbody>
           </table>
         </div>
+        <Pagination
+          total={total}
+          limit={PAGE_SIZE}
+          offset={offset}
+          onChange={setOffset}
+          label="pembayaran"
+        />
+        </>
       )}
     </div>
   );

@@ -47,13 +47,14 @@ router.get('/pending', requireAdmin, (req: Request, res: Response) => {
     Number.parseInt(String(req.query.offset ?? '0'), 10) || 0
   );
   const payments = manualPaymentsRepository.listPending(limit, offset);
+  const total = manualPaymentsRepository.countPending();
   const userMap = enrichWithUserSummary(payments);
   res.status(200).json({
     payments: payments.map((p) => ({
       ...p,
       user: userMap.get(p.user_id) ?? null,
     })),
-    pagination: { limit, offset },
+    pagination: { limit, offset, total },
   });
 });
 
@@ -82,11 +83,16 @@ router.get('/history', requireAdmin, (req: Request, res: Response) => {
     typeof userIdRaw === 'string' && userIdRaw.length > 0
       ? Number(userIdRaw)
       : null;
+  const resolvedUserId = Number.isInteger(userId) ? userId : null;
   const payments = manualPaymentsRepository.listHistory({
-    userId: Number.isInteger(userId) ? userId : null,
+    userId: resolvedUserId,
     status,
     limit,
     offset,
+  });
+  const total = manualPaymentsRepository.countHistory({
+    userId: resolvedUserId,
+    status,
   });
   const userMap = enrichWithUserSummary(payments);
   res.status(200).json({
@@ -94,7 +100,7 @@ router.get('/history', requireAdmin, (req: Request, res: Response) => {
       ...p,
       user: userMap.get(p.user_id) ?? null,
     })),
-    pagination: { limit, offset },
+    pagination: { limit, offset, total },
   });
 });
 

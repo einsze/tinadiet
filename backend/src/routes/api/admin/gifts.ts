@@ -80,8 +80,10 @@ router.get('/', requireAdmin, (req: Request, res: Response) => {
   const limit = Math.min(Math.max(Number(req.query.limit ?? 50), 1), 200);
   const offset = Math.max(Number(req.query.offset ?? 0), 0);
   const gifts = giftsRepository.listAdmin(status, limit, offset);
+  const total = giftsRepository.countAdmin(status);
   res.status(200).json({
     gifts: gifts.map((g) => decorate(g)).filter(Boolean),
+    pagination: { limit, offset, total },
   });
 });
 

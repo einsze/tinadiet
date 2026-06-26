@@ -22,7 +22,9 @@ type Stmts = {
   findAwaitingSlipByUser: Statement;
   deleteAwaitingSlipByIdAndUser: Statement;
   listPending: Statement;
+  countPending: Statement;
   listHistory: Statement;
+  countHistory: Statement;
   countByUserAndStatus: Statement;
   markReviewed: Statement;
   markRevoked: Statement;
@@ -69,6 +71,10 @@ const stmts = (): Stmts => {
        ORDER BY created_at ASC
        LIMIT ? OFFSET ?`
     ),
+    countPending: db.prepare(
+      `SELECT COUNT(*) AS c FROM manual_payments
+       WHERE status IN ('pending', 'flagged_review')`
+    ),
     listHistory: db.prepare(
       `SELECT ${COLUMNS} FROM manual_payments
        WHERE status NOT IN ('awaiting_slip', 'pending', 'flagged_review')
@@ -76,6 +82,12 @@ const stmts = (): Stmts => {
          AND (@status = '' OR status = @status)
        ORDER BY reviewed_at DESC
        LIMIT @limit OFFSET @offset`
+    ),
+    countHistory: db.prepare(
+      `SELECT COUNT(*) AS c FROM manual_payments
+       WHERE status NOT IN ('awaiting_slip', 'pending', 'flagged_review')
+         AND (@userId IS NULL OR user_id = @userId)
+         AND (@status = '' OR status = @status)`
     ),
     countByUserAndStatus: db.prepare(
       `SELECT COUNT(*) AS c FROM manual_payments
@@ -189,6 +201,11 @@ export const manualPaymentsRepository = {
     return hydrateAll(rows);
   },
 
+  countPending: (): number => {
+    const row = stmts().countPending.get() as { c: number };
+    return row.c;
+  },
+
   listHistory: (input: {
     userId: number | null;
     status: ManualPaymentStatus | '';
@@ -202,6 +219,17 @@ export const manualPaymentsRepository = {
       offset: input.offset,
     }) as RawManualPayment[];
     return hydrateAll(rows);
+  },
+
+  countHistory: (input: {
+    userId: number | null;
+    status: ManualPaymentStatus | '';
+  }): number => {
+    const row = stmts().countHistory.get({
+      userId: input.userId,
+      status: input.status,
+    }) as { c: number };
+    return row.c;
   },
 
   countByUserAndStatus: (
